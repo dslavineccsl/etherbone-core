@@ -629,6 +629,7 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendo
 }
 
 #include <vector>
+#include <ostream>
 
 /****************************************************************************/
 /*                                 C++ API                                  */
@@ -649,6 +650,22 @@ class Device;
 class Cycle;
 class Operation;
 
+#if ETHERBONE_THROWS
+struct exception_t {
+  const char* method;
+  status_t    status;
+  exception_t(const char* m = "", status_t s = EB_OK) : method(m), status(s) { }
+};
+inline std::ostream& operator << (std::ostream& o, const exception_t& e) {
+  return o << e.method << ": " << eb_status(e.status);
+}
+#define EB_STATUS_OR_VOID_T void
+#define EB_RETURN_OR_THROW(m, x) do { status_t result = x; if (result != EB_OK) { throw exception_t(m, result); } } while (0)
+#else
+#define EB_STATUS_OR_VOID_T status_t
+#define EB_RETURN_OR_THROW(m, x) return x
+#endif
+
 class Handler {
   public:
     EB_PUBLIC virtual ~Handler();
@@ -661,14 +678,14 @@ class Socket {
   public:
     Socket();
     
-    status_t open(const char* port = 0, width_t width = EB_DATAX|EB_ADDRX);
-    status_t close();
+    EB_STATUS_OR_VOID_T open(const char* port = 0, width_t width = EB_DATAX|EB_ADDRX);
+    EB_STATUS_OR_VOID_T close();
     
-    status_t passive(const char* address);
+    EB_STATUS_OR_VOID_T passive(const char* address);
     
     /* attach/detach a virtual device */
-    status_t attach(const struct sdb_device* device, Handler* handler);
-    status_t detach(const struct sdb_device* device);
+    EB_STATUS_OR_VOID_T attach(const struct sdb_device* device, Handler* handler);
+    EB_STATUS_OR_VOID_T detach(const struct sdb_device* device);
     
     int run(int timeout_us = -1);
     
@@ -688,8 +705,8 @@ class Device {
   public:
     Device();
     
-    status_t open(Socket socket, const char* address, width_t width = EB_ADDRX|EB_DATAX, int attempts = 5);
-    status_t close();
+    EB_STATUS_OR_VOID_T open(Socket socket, const char* address, width_t width = EB_ADDRX|EB_DATAX, int attempts = 5);
+    EB_STATUS_OR_VOID_T close();
     
     const Socket socket() const;
     Socket socket();
@@ -697,20 +714,20 @@ class Device {
     width_t width() const;
     
     template <typename T>
-    status_t sdb_scan_bus (const struct sdb_bridge* bridge, T* user, sdb_callback_t);
+    EB_STATUS_OR_VOID_T sdb_scan_bus (const struct sdb_bridge* bridge, T* user, sdb_callback_t);
     template <typename T>
-    status_t sdb_scan_root(T* user, sdb_callback_t);
+    EB_STATUS_OR_VOID_T sdb_scan_root(T* user, sdb_callback_t);
     
-    status_t sdb_find_by_address(eb_address_t address, struct sdb_device* output);
-    status_t sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output);
-    
-    template <typename T>
-    status_t read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb);
-    status_t read(eb_address_t address, eb_format_t format, eb_data_t* data);
+    EB_STATUS_OR_VOID_T sdb_find_by_address(eb_address_t address, struct sdb_device* output);
+    EB_STATUS_OR_VOID_T sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output);
     
     template <typename T>
-    status_t write(eb_address_t address, eb_format_t format, eb_data_t data, T* user, eb_callback_t cb);
-    status_t write(eb_address_t address, eb_format_t format, eb_data_t data);
+    EB_STATUS_OR_VOID_T read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb);
+    EB_STATUS_OR_VOID_T read(eb_address_t address, eb_format_t format, eb_data_t* data);
+    
+    template <typename T>
+    EB_STATUS_OR_VOID_T write(eb_address_t address, eb_format_t format, eb_data_t data, T* user, eb_callback_t cb);
+    EB_STATUS_OR_VOID_T write(eb_address_t address, eb_format_t format, eb_data_t data);
     
   protected:
     Device(eb_device_t device);
@@ -733,12 +750,12 @@ class Cycle {
     
     // Start a cycle on the target device.
     template <typename T>
-    status_t open(Device device, T* user, eb_callback_t);
-    status_t open(Device device);
+    EB_STATUS_OR_VOID_T open(Device device, T* user, eb_callback_t);
+    EB_STATUS_OR_VOID_T open(Device device);
     
     void abort();
-    status_t close();
-    status_t close_silently();
+    EB_STATUS_OR_VOID_T close();
+    EB_STATUS_OR_VOID_T close_silently();
     
     void read (address_t address, format_t format = EB_DATAX, data_t* data = 0);
     void write(address_t address, format_t format, data_t  data);
@@ -817,31 +834,31 @@ inline Socket::Socket()
  : socket(EB_NULL) {
 }
 
-inline status_t Socket::open(const char* port, width_t width) {
-  return eb_socket_open(EB_ABI_CODE, port, width, &socket);
+inline EB_STATUS_OR_VOID_T Socket::open(const char* port, width_t width) {
+  EB_RETURN_OR_THROW("Socket::open", eb_socket_open(EB_ABI_CODE, port, width, &socket));
 }
 
-inline status_t Socket::close() {
+inline EB_STATUS_OR_VOID_T Socket::close() {
   status_t out = eb_socket_close(socket);
   if (out == EB_OK) socket = EB_NULL;
-  return out;
+  EB_RETURN_OR_THROW("Socket::close", out);
 }
 
-inline status_t Socket::passive(const char* address) {
-  return eb_socket_passive(socket, address);
+inline EB_STATUS_OR_VOID_T Socket::passive(const char* address) {
+  EB_RETURN_OR_THROW("Socket::passive", eb_socket_passive(socket, address));
 }
 
-inline status_t Socket::attach(const struct sdb_device* device, Handler* handler) {
+inline EB_STATUS_OR_VOID_T Socket::attach(const struct sdb_device* device, Handler* handler) {
   struct eb_handler h;
   h.device = device;
   h.data = handler;
   h.read  = &eb_proxy_read_handler;
   h.write = &eb_proxy_write_handler;
-  return eb_socket_attach(socket, &h);
+  EB_RETURN_OR_THROW("Socket::attach", eb_socket_attach(socket, &h));
 }
 
-inline status_t Socket::detach(const struct sdb_device* device) {
-  return eb_socket_detach(socket, device);
+inline EB_STATUS_OR_VOID_T Socket::detach(const struct sdb_device* device) {
+  EB_RETURN_OR_THROW("Socket::detach", eb_socket_detach(socket, device));
 }
 
 inline int Socket::run(int timeout_us) {
@@ -868,14 +885,14 @@ inline Device::Device()
  : device(EB_NULL) { 
 }
     
-inline status_t Device::open(Socket socket, const char* address, width_t width, int attempts) {
-  return eb_device_open(socket.socket, address, width, attempts, &device);
+inline EB_STATUS_OR_VOID_T Device::open(Socket socket, const char* address, width_t width, int attempts) {
+  EB_RETURN_OR_THROW("Device::open", eb_device_open(socket.socket, address, width, attempts, &device));
 }
     
-inline status_t Device::close() {
+inline EB_STATUS_OR_VOID_T Device::close() {
   status_t out = eb_device_close(device);
   if (out == EB_OK) device = EB_NULL;
-  return out;
+  EB_RETURN_OR_THROW("Device::close", out);
 }
 
 inline const Socket Device::socket() const {
@@ -891,35 +908,35 @@ inline width_t Device::width() const {
 }
 
 template <typename T>
-inline eb_status_t Device::sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t cb) {
-  return eb_sdb_scan_bus(device, bridge, user, cb);
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_bus", eb_sdb_scan_bus(device, bridge, user, cb));
 }
 
 template <typename T>
-inline eb_status_t Device::sdb_scan_root(T* user, sdb_callback_t cb) {
-  return eb_sdb_scan_root(device, user, cb);
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_root(T* user, sdb_callback_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_root", eb_sdb_scan_root(device, user, cb));
 }
 
-inline eb_status_t Device::sdb_find_by_address(eb_address_t address, struct sdb_device* output) {
-  return eb_sdb_find_by_address(device, address, output);
-}
-
-template <typename T>
-inline eb_status_t Device::read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb) {
-  return eb_device_read(device, address, format, data, user, cb);
-}
-
-inline status_t Device::read(eb_address_t address, eb_format_t format, eb_data_t* data) {
-  return eb_device_read(device, address, format, data, 0, eb_block);
+inline EB_STATUS_OR_VOID_T Device::sdb_find_by_address(eb_address_t address, struct sdb_device* output) {
+  EB_RETURN_OR_THROW("Device::sdb_find_by_address", eb_sdb_find_by_address(device, address, output));
 }
 
 template <typename T>
-inline eb_status_t Device::write(eb_address_t address, eb_format_t format, eb_data_t data, T* user, eb_callback_t cb) {
-  return eb_device_write(device, address, format, data, user, cb);
+inline EB_STATUS_OR_VOID_T Device::read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb) {
+  EB_RETURN_OR_THROW("Device::read", eb_device_read(device, address, format, data, user, cb));
 }
 
-inline status_t Device::write(eb_address_t address, eb_format_t format, eb_data_t data) {
-  return eb_device_write(device, address, format, data, 0, eb_block);
+inline EB_STATUS_OR_VOID_T Device::read(eb_address_t address, eb_format_t format, eb_data_t* data) {
+  EB_RETURN_OR_THROW("Device::read", eb_device_read(device, address, format, data, 0, eb_block));
+}
+
+template <typename T>
+inline EB_STATUS_OR_VOID_T Device::write(eb_address_t address, eb_format_t format, eb_data_t data, T* user, eb_callback_t cb) {
+  EB_RETURN_OR_THROW("Device::write", eb_device_write(device, address, format, data, user, cb));
+}
+
+inline EB_STATUS_OR_VOID_T Device::write(eb_address_t address, eb_format_t format, eb_data_t data) {
+  EB_RETURN_OR_THROW("Device::write", eb_device_write(device, address, format, data, 0, eb_block));
 }
 
 inline Cycle::Cycle()
@@ -927,12 +944,12 @@ inline Cycle::Cycle()
 }
 
 template <typename T>
-inline eb_status_t Cycle::open(Device device, T* user, eb_callback_t cb) {
-  return eb_cycle_open(device.device, user, cb, &cycle);
+inline EB_STATUS_OR_VOID_T Cycle::open(Device device, T* user, eb_callback_t cb) {
+  EB_RETURN_OR_THROW("Cycle::open", eb_cycle_open(device.device, user, cb, &cycle));
 }
 
-inline eb_status_t Cycle::open(Device device) {
-  return eb_cycle_open(device.device, 0, eb_block, &cycle);
+inline EB_STATUS_OR_VOID_T Cycle::open(Device device) {
+  EB_RETURN_OR_THROW("Cycle::open", eb_cycle_open(device.device, 0, eb_block, &cycle));
 }
 
 inline void Cycle::abort() {
@@ -940,18 +957,18 @@ inline void Cycle::abort() {
   cycle = EB_NULL;
 }
 
-inline eb_status_t Cycle::close() {
-  eb_status_t status;
+inline EB_STATUS_OR_VOID_T Cycle::close() {
+  status_t status;
   status = eb_cycle_close(cycle);
   cycle = EB_NULL;
-  return status;
+  EB_RETURN_OR_THROW("Cycle::close", status);
 }
 
-inline eb_status_t Cycle::close_silently() {
-  eb_status_t status;
+inline EB_STATUS_OR_VOID_T Cycle::close_silently() {
+  status_t status;
   status = eb_cycle_close_silently(cycle);
   cycle = EB_NULL;
-  return status;
+  EB_RETURN_OR_THROW("Cycle::close_silently", status);
 }
 
 inline void Cycle::read(address_t address, format_t format, data_t* data) {
