@@ -32,7 +32,7 @@
 #include "posix-ip.h"
 #include "../transport/transport.h"
 
-#define EB_POSIX_TCP_MTU 4000
+#define EB_POSIX_TCP_MTU 0
 
 EB_PRIVATE eb_status_t eb_posix_tcp_open(struct eb_transport* transport, const char* port);
 EB_PRIVATE void eb_posix_tcp_close(struct eb_transport* transport);

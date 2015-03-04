@@ -31,7 +31,7 @@
 
 #include "../transport/transport.h"
 
-#define EB_DEV_MTU 4000
+#define EB_DEV_MTU 0
 
 EB_PRIVATE eb_status_t eb_dev_open(struct eb_transport* transport, const char* port);
 EB_PRIVATE void eb_dev_close(struct eb_transport* transport);
