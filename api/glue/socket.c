@@ -174,15 +174,24 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   struct eb_socket_aux* aux;
   struct eb_handler_address* handler;
   struct eb_transport* transport;
+  struct eb_device* device;
   eb_transport_t transportp, next_transportp;
   eb_socket_aux_t auxp;
   eb_handler_address_t i, next;
+  eb_status_t status;
   
   socket = EB_SOCKET(socketp);
   
   /* If there are open devices, we can't close */
-  if (socket->first_device != EB_NULL)
-    return EB_BUSY;
+  while (socket->first_device != EB_NULL) {
+    device = EB_DEVICE(socket->first_device);
+    /* Only passive devices allowed at this point */
+    if (device->un_link.passive != socket->first_device)
+      return EB_BUSY;
+    /* Release the passive device */
+    status = eb_device_close(socket->first_device);
+    if (status != EB_OK) return status;
+  }
   
   /* All responses must be closed if devices are closed */
   /* assert (socket->first_response == EB_NULL); */
