@@ -108,12 +108,10 @@ begin
   master_o.sel <= r_rx_rec_hdr.sel(master_o.sel'range);
   
   -- Stall the RX path if:
-  --   Any TX FIFO is full (probably only tag matters)
+  --   Any TX FIFO is full
   --   We are pushing a strobe that is stalled
   --   We are waiting to lower the cycle line
-  -- 
-  -- !!! could be improved to allow pipeline progress until stb/cyc need to be raised again
-  s_stall <= tag_full_i OR -- pass_full_i OR cfg_full_i OR wbm_full_i OR 
+  s_stall <= tag_full_i OR pass_full_i OR cfg_full_i OR wbm_full_i OR 
              (r_master_stb_o and master_stall_i) OR
              (not r_master_cyc_o and s_wbm_busy);
   
