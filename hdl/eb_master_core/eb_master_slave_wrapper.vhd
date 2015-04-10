@@ -16,8 +16,7 @@
     g_ebs_timeout_cycles  : natural;
     g_ebs_mtu             : natural;
     
-    g_ebm_adr_bits_hi     : natural := 2;
-    g_ebm_size            : natural := 32
+    g_ebm_adr_bits_hi     : natural
     
     );
   port(
@@ -58,6 +57,7 @@
     signal ebs_snk_out : t_wrf_sink_out;
     signal ebs_src_out : t_wrf_source_out;
     signal ebs_src_in  : t_wrf_source_in;
+    
     
   begin
   

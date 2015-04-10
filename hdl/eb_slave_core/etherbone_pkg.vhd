@@ -39,6 +39,9 @@ package etherbone_pkg is
     date          => x"20140615",
     name          => "Etherbone_Master   ")));
   
+  function f_hi_adr_bits(ebm : t_sdb_device) return natural;
+  
+  
   component eb_raw_slave is
     generic(
       g_sdb_address    : std_logic_vector(63 downto 0);
@@ -65,8 +68,7 @@ package etherbone_pkg is
     g_ebs_timeout_cycles  : natural := 6250000;
     g_ebs_mtu             : natural := 1500;
     
-    g_ebm_adr_bits_hi     : natural := 2;
-    g_ebm_size            : natural := 32
+    g_ebm_adr_bits_hi     : natural := f_hi_adr_bits(c_ebm_sdb)
     
     );
   port(
@@ -146,5 +148,21 @@ port(
   src_o         : out t_wrf_source_out
 );
 end component;
+
+
+
+end etherbone_pkg;
+
+package body etherbone_pkg is
+
+   -- gets correct number of high address bits from ebm sdb
+   function f_hi_adr_bits(ebm : t_sdb_device) return natural is
+      variable ret : natural := 2;
+      variable len : natural;
+   begin
+     len := f_hot_to_bin(ebm.sdb_component.addr_last);
+     ret := c_wishbone_address_width - (len - 2);
+     return ret;
+   end f_hi_adr_bits;
 
 end etherbone_pkg;
