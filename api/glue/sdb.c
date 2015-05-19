@@ -623,7 +623,8 @@ static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const s
       }
     }
     
-    if (des->empty.record_type == sdb_record_device && 
+    if ((des->empty.record_type == sdb_record_device || 
+        des->empty.record_type == sdb_record_bridge) && 
         des->device.sdb_component.product.vendor_id == record->vendor_id &&
         des->device.sdb_component.product.device_id == record->device_id) {
       if (record->fill < record->size) 
@@ -644,6 +645,25 @@ eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint
   record.output = output;
   
   if ((record.status = eb_sdb_scan_root(device, &record, eb_cb_find_by_identity)) == EB_OK)
+    while (record.pending > 0) 
+      eb_socket_run(eb_device_socket(device), -1);
+  
+  *devices = record.fill;
+  return record.status;
+}
+
+
+eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices, const struct sdb_bridge* bridge) {
+  struct eb_find_by_identity record;
+  
+  record.vendor_id = vendor_id;
+  record.device_id = device_id;
+  record.size = *devices;
+  record.fill = 0;
+  record.pending = 1;
+  record.output = output;
+
+  if ((record.status = eb_sdb_scan_bus(device, bridge, &record, eb_cb_find_by_identity)) == EB_OK)
     while (record.pending > 0) 
       eb_socket_run(eb_device_socket(device), -1);
   

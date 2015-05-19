@@ -625,6 +625,8 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t ad
  */
 EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
+EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices, const struct sdb_bridge* bridge);
+
 #ifdef __cplusplus
 }
 
