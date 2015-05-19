@@ -471,16 +471,17 @@ eb_socket_t eb_device_socket(eb_device_t device);
  * When status != EB_OK, 'operations' points to the offending operation.
  *
  * Callback status codes:
- *   OK		- cycle was executed successfully
+ *   OK         - cycle was executed successfully
  *   ADDRESS    - 1. a specified address exceeded device bus address width
  *                2. the address was not aligned to the operation granularity
  *   WIDTH      - 1. written value exceeded the operation granularity
  *                2. the granularity exceeded the device port width
  *   ENDIAN     - operation format was not word size and no endian was specified
- *   OVERFLOW	- too many operations queued for this cycle (wire limit)
+ *   OVERFLOW   - too many operations queued for this cycle (wire limit)
  *   TIMEOUT    - remote system never responded to EB request
  *   FAIL       - remote host violated protocol
  *   OOM        - out of memory while queueing operations to the cycle
+ *   SEGFAULT   - at least one operation reported ERR not ACK (see eb_operation_had_error)
  */
 EB_PUBLIC
 eb_status_t eb_cycle_open(eb_device_t    device, 
