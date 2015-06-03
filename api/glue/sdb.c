@@ -652,8 +652,7 @@ eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint
   return record.status;
 }
 
-
-eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices, const struct sdb_bridge* bridge) {
+eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, const struct sdb_bridge* bridge, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices) {
   struct eb_find_by_identity record;
   
   record.vendor_id = vendor_id;

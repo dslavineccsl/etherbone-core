@@ -626,7 +626,12 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t ad
  */
 EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
-EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices, const struct sdb_bridge* bridge);
+
+/* Similar to eb_sdb_find_by_identity, but the root of the SDB tree to be searched can be specified.
+ * eb_sdb_find_by_identity now supports finding crossbars, use it to find special CBs and use them as
+ * root node for eb_sdb_find_by_identity_at. 
+ */
+EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, const struct sdb_bridge* bridge, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
 #ifdef __cplusplus
 }
