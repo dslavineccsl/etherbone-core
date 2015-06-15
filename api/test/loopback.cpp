@@ -139,9 +139,6 @@ Record::Record(width_t width_) {
     address &= (address_t)(~0) >> ((sizeof(address)-addrw)*8);
     error = (seed & 3) == 1;
     seed >>= 2;
-    
-    /* Don't mess with the SDWB block */
-    if (address < 0x4000) address += 0x4000;
   }
   
   /* Align the access */

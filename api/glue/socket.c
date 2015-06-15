@@ -141,6 +141,7 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   aux->time_cache = 0;
   aux->rba = 0x8000;
   aux->first_transport = first_transport;
+  aux->sdb_offset = 0;
   
   if (link_type != eb_transport_size) {
     eb_socket_close(socketp);

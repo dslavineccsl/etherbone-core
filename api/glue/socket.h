@@ -34,6 +34,9 @@
 #include "../transport/transport.h"
 #include "handler.h"
 
+/* The size of space that sdb_offset points to */
+#define SDB_REQUIRED_SIZE 65536
+
 typedef EB_POINTER(eb_response) eb_response_t;
 struct eb_response {
   /* xxxxxxxxxxxxxxxL
@@ -52,6 +55,7 @@ struct eb_response {
 
 typedef EB_POINTER(eb_socket_aux) eb_socket_aux_t;
 struct eb_socket_aux {
+  eb_address_t sdb_offset;
   uint32_t time_cache;
   uint16_t rba;
   
@@ -60,7 +64,7 @@ struct eb_socket_aux {
 
 struct eb_socket {
   eb_device_t first_device;
-  eb_handler_address_t first_handler;
+  eb_handler_address_t first_handler; /* in ascending order, non-overlapping */
   
   /* Functional-style queue using lists */
   eb_response_t first_response;

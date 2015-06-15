@@ -143,12 +143,6 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
   eb_address_t dev_first, dev_last;
   int fail;
   
-  /* SDB address? It's read only ... */
-  if (addr_b < 0x4000) {
-    *error = (*error << 1) | 1;
-    return;
-  }
-  
   socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
@@ -179,19 +173,28 @@ void eb_socket_write(eb_socket_t socketp, eb_width_t widths, eb_address_t addr_b
 }
 
 eb_data_t eb_socket_read_config(eb_socket_t socketp, eb_width_t widths, eb_address_t addr, uint64_t error) {
-  /* We only support reading from the error shift register so far */
+  struct eb_socket* socket;
+  struct eb_socket_aux* aux;
+  eb_address_t sdb;
+  
+  socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
+  sdb = aux->sdb_offset;
+  
+  /* We only support reading from the error shift register and SDB so far */
   eb_data_t out;
   int len;
   uint8_t buf[16] = {
     error >> 56, error >> 48, error >> 40, error >> 32,
     error >> 24, error >> 16, error >>  8, error >>  0,
-    0, 0, 0, 0, 0, 0, 0, 0
+    sdb   >> 56, sdb   >> 48, sdb   >> 40, sdb   >> 32,
+    sdb   >> 24, sdb   >> 16, sdb   >>  8, sdb   >>  0,
   };
   
   len = (widths & EB_DATAX);
   
   /* Read out of bounds */
-  if (addr >= 8) return 0;
+  if (addr >= 16) return 0;
   
   /* Read memory -- config space always bigendian */
   out = 0;
@@ -209,16 +212,21 @@ eb_data_t eb_socket_read(eb_socket_t socketp, eb_width_t widths, eb_address_t ad
   eb_handler_address_t addressp;
   struct eb_handler_address* address;
   struct eb_socket* socket;
+  struct eb_socket_aux* aux;
   eb_address_t dev_first, dev_last;
+  eb_address_t sdb;
   int fail;
   
+  socket = EB_SOCKET(socketp);
+  aux = EB_SOCKET_AUX(socket->aux);
+  sdb = aux->sdb_offset;
+  
   /* SDB address? */
-  if (addr_b < 0x4000) {
+  if (addr_b >= sdb && addr_b < sdb + SDB_REQUIRED_SIZE) {
     *error = (*error << 1);
-    return eb_sdb(socketp, widths, addr_b); /* always bigendian */
+    return eb_sdb(socketp, widths, addr_b-sdb); /* always bigendian */
   }
   
-  socket = EB_SOCKET(socketp);
   for (addressp = socket->first_handler; addressp != EB_NULL; addressp = address->next) {
     address = EB_HANDLER_ADDRESS(addressp);
     dev_first = address->device->sdb_component.addr_first;
