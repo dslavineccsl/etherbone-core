@@ -78,9 +78,10 @@ SOURCES	= memory/static.c		\
 all:	glue/version.h $(TOOLS) $(TESTS) $(ARCHIVE) $(LIBRARY)
 
 install: all
-	mkdir -p $(STAGING)$(PREFIX)/bin $(STAGING)$(PREFIX)/include $(STAGING)$(PREFIX)/lib
+	mkdir -p $(STAGING)$(PREFIX)/bin $(STAGING)$(PREFIX)/include $(STAGING)$(PREFIX)/lib/pkgconfig
 	cp -d $(LIBRARY) $(EXTRA) $(ARCHIVE) $(STAGING)$(PREFIX)/lib
 	cp etherbone.h $(STAGING)$(PREFIX)/include
+	sed "s#@PREFIX@#$(PREFIX)#" < etherbone.pc.in > $(STAGING)$(PREFIX)/lib/pkgconfig/etherbone.pc
 	cp $(TOOLS) $(STAGING)$(PREFIX)/bin
 
 glue/version.h::
