@@ -45,45 +45,8 @@
 --! -> drop cycle before switching betwenn ctrl & data!
 --!
 
---! Ctrl Register map
---!--------------------------------------------------------------------------------------
---! 0x00 wo CLEAR          writing '1' here will clear all data buffers        
+--! Ctrl Register map: See ebm_regs.h
 --!
---! 0x04 wo FLUSH          writing '1' here will send the packet. 
---!                        Will err when buffer empty or overflow
---!
---! 0x08 ro STATUS         b31..b16  Payload byte count 
---!                        b15..b01  reserved
---!                             b00  Buffer Overflow                               
---!
---! 0x0C rw SRC_MAC_HI              bytes 1-4 of source MAC address  
---! 0x10 rw SRC_MAC_LO     b15..b00 bytes 5-6 of source MAC address  
---!
---! 0x14 rw SRC_IPV4       source IPV4 address
---!
---! 0x18 rw SRC_UDP_PORT   b15..b00 source UDP port number 
---!
---! 0x1C rw DST_MAC_HI              bytes 1-4 of destination MAC address    
---! 0x20 rw DST_MAC_LO     b15..b00 bytes 5-6 of destination MAC address
---!
---! 0x24 rw DST_IPV4       destination IPV4 address
---!
---! 0x28 rw DST_UDP_PORT   b15..b00 destination UDP port number 
---!
---! 0x2C rw MTU            Maximum payload byte length
---!
---! 0x30 rw ADR_HI         b31..b31-g_adr_hi  High bits of the data address lines
---!
---! 0x34 rw OPS_MAX        Maximum payload wishbone operations (implementation pending)     
---!
---! 0x40 rw EB_OPT         Etherbone Record options
---!
---! 0x44 rw SEMA           Semaphore register, can be used to indicate current owner of EBM
---! 
---! 0x48 rw UDP_MODE       writing '1' bypasses Etherbone logic, enabling direct input of UDP payload,
---!                        resetting to '0' sends the packet.      
---! 
---! 0x4C wo UDP_DATA       Data interface for direct input of UDP payload
 --! @author Mathias Kreider <m.kreider@gsi.de>
 --!
 --------------------------------------------------------------------------------
@@ -113,6 +76,7 @@ use work.eb_internals_pkg.all;
 use work.eb_hdr_pkg.all;
 use work.etherbone_pkg.all;
 use work.wr_fabric_pkg.all;
+use work.ebm_auto_pkg.all;
 
 entity eb_master_top is
 generic(g_adr_bits_hi : natural := 8;
@@ -137,8 +101,8 @@ architecture rtl of eb_master_top is
    constant slaves   : natural := 2;
    constant masters  : natural := 1;
 
-   signal s_adr_hi         : std_logic_vector(g_adr_bits_hi-1 downto 0);
-   signal s_cfg_rec_hdr    : t_rec_hdr;
+   signal s_adr_hi         : std_logic_vector(31 downto 0);
+   signal s_cfg_rec_hdr    : t_wishbone_data;
   
    signal r_drain          : std_logic;
    signal s_rst_n          : std_logic;
@@ -156,14 +120,13 @@ architecture rtl of eb_master_top is
    signal s_udp, r_udp_raw : std_logic;
   
    signal s_skip_stb       : std_logic;
-   signal s_length         : unsigned(15 downto 0); -- of UDP in words
-   signal s_max_ops        : unsigned(15 downto 0); -- max eb ops count per packet
-   
+   signal s_length         : std_logic_vector(15 downto 0); -- of UDP in words
+   signal s_busy : std_logic;
    
    signal s_udp_raw_o   : std_logic;
    signal s_udp_we_o    : std_logic;
    signal s_udp_valid_i : std_logic;   
-   signal s_udp_data_o  : std_logic_vector(31 downto 0);
+   signal s_udp_data_o  : std_logic_vector(15 downto 0);
    
    --wb signals
    signal s_framer_in      : t_wishbone_slave_in; 
@@ -210,10 +173,10 @@ architecture rtl of eb_master_top is
       return ret;
    end function;
  
-   constant c_ctrl_adr : std_logic_vector(31 downto 0) := x"00000000"; 
-   constant c_ctrl_msk : std_logic_vector(31 downto 0) := f_ctrl_msk;
-   constant c_framer_adr : std_logic_vector(31 downto 0) := f_framer_adr;
-   constant c_framer_msk : std_logic_vector(31 downto 0) := f_framer_msk;
+   constant c_ctrl_adr    : std_logic_vector(31 downto 0) := x"00000000"; 
+   constant c_ctrl_msk    : std_logic_vector(31 downto 0) := f_ctrl_msk;
+   constant c_framer_adr  : std_logic_vector(31 downto 0) := f_framer_adr;
+   constant c_framer_msk  : std_logic_vector(31 downto 0) := f_framer_msk;
 
 begin
 -- instances:
@@ -251,7 +214,7 @@ begin
    s_framer_in.cyc <= cbar_masterport_out(1).cyc;
    s_framer_in.stb <= cbar_masterport_out(1).stb; 
    s_framer_in.we  <= cbar_masterport_out(1).adr(c_rw_bit); 
-   s_framer_in.adr <= s_adr_hi & cbar_masterport_out(1).adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
+   s_framer_in.adr <= s_adr_hi(s_adr_hi'left downto s_adr_hi'length-g_adr_bits_hi) & cbar_masterport_out(1).adr(slave_i.adr'left-g_adr_bits_hi downto 0); 
    s_framer_in.dat <= cbar_masterport_out(1).dat;
    s_framer_in.sel <= cbar_masterport_out(1).sel; 
    cbar_masterport_in(1) <= s_framer_out;
@@ -259,40 +222,42 @@ begin
    s_ctrl_in <= cbar_masterport_out(0);
    cbar_masterport_in(0) <= s_ctrl_out;
 
-   wbif: eb_master_wb_if
-   generic map (g_adr_bits_hi => g_adr_bits_hi,
-                g_mtu => g_mtu)
-   PORT MAP (
-      clk_i       => clk_i,
-      rst_n_i     => rst_n_i,
 
-      slave_i     => s_ctrl_in,
-      slave_o     => s_ctrl_out,
+   wbif : ebm_auto
+   port map (
+      clk_sys_i      => clk_i,
+      rst_sys_n_i    => rst_n_i,
 
-      byte_cnt_i  => s_byte_cnt,
-      error_i(0)  => s_ovf,
+      slave_stall_i(0)  => '0',
+      clear_o(0)        => s_clear,
+      flush_o(0)        => s_tx_send_now,
 
-      clear_o     => s_clear,
-      flush_o     => s_tx_send_now,
+      status_i(31 downto 16)  => s_byte_cnt,
+      status_i(15 downto 3)   => (others => '0'),
+      status_i(2)             => s_ovf,
+      status_i(1)             => s_busy,
+      status_i(0)             => '0',
 
-      my_mac_o    => s_my_mac,
-      my_ip_o     => s_my_ip,
-      my_port_o   => s_my_port,
+      src_mac_o      => s_my_mac,
+      src_ip_o       => s_my_ip,
+      src_port_o     => s_my_port,
+      dst_mac_o      => s_his_mac,
+      dst_ip_o       => s_his_ip,
+      dst_port_o     => s_his_port,
 
-      his_mac_o   => s_his_mac, 
-      his_ip_o    => s_his_ip,
-      his_port_o  => s_his_port,
-      length_o    => s_length,
-      max_ops_o   => s_max_ops,
-      adr_hi_o    => s_adr_hi,
-      eb_opt_o    => s_cfg_rec_hdr,
-		
-		udp_raw_o   => s_udp_raw_o,
-      udp_we_o    => s_udp_we_o,
-      udp_valid_i => s_udp_valid_i,
-      udp_data_o  => s_udp_data_o
-   );
-  
+      mtu_o          => s_length,
+      adr_hi_o       => s_adr_hi,
+      eb_opt_o       => s_cfg_rec_hdr,
+      sema_o         => open,
+      
+      udp_raw_o(0)      => s_udp_raw_o,
+      udp_data_WR_o(0)  => s_udp_we_o,
+      udp_data_o        => s_udp_data_o,
+      
+      slave_i        => s_ctrl_in,
+      slave_o        => s_ctrl_out);
+
+    
    framer: eb_framer 
    PORT MAP (
       clk_i           => clk_i,
@@ -306,12 +271,12 @@ begin
 
       byte_cnt_o      => s_byte_cnt,
       ovf_o           => s_ovf,
+      busy_o          => s_busy,
 
       tx_send_now_i   => s_tx_send_now,
       tx_flush_o      => s_tx_flush, 
-      max_ops_i       => s_max_ops,
-      length_i        => s_length,
-      cfg_rec_hdr_i   => s_cfg_rec_hdr);  
+      length_i        => unsigned(s_length),
+      cfg_rec_hdr_i   => f_parse_rec(s_cfg_rec_hdr));  
  
  ---debug
   framer_in   <= s_framer_in;
@@ -341,7 +306,7 @@ begin
       if s_udp_raw_o = '1' then
          s_narrow_in.cyc <= s_udp_raw_o;
          s_narrow_in.stb <= s_udp_we_o;
-         s_narrow_in.dat <= s_udp_data_o;
+         s_narrow_in.dat <= x"0000" & s_udp_data_o;
          s_udp_valid_i   <= s_udp_raw_o and s_udp_we_o and not s_narrow_out.stall;
          s_narrow2framer <= ('0', '0', '0', '0', '0', (others => '0'));
       else

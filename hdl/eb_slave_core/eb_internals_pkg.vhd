@@ -297,40 +297,7 @@ package eb_internals_pkg is
  
 
  
-   component eb_master_wb_if is
-    generic(g_adr_bits_hi : natural;
-      g_mtu         : natural);
-    port(
-      clk_i       : in  std_logic;
-      rst_n_i     : in  std_logic;
-      
-      slave_i     : in  t_wishbone_slave_in;
-      slave_o     : out t_wishbone_slave_out;
-      
-      byte_cnt_i  : in std_logic_vector(15 downto 0);
-      error_i     : in std_logic_vector(0 downto 0);
-      
-      
-      clear_o     : out std_logic;
-      flush_o     : out std_logic;
-      
-      my_mac_o    : out std_logic_vector(47 downto 0);
-      my_ip_o     : out std_logic_vector(31 downto 0);
-      my_port_o   : out std_logic_vector(15 downto 0);
-      
-      his_mac_o   : out std_logic_vector(47 downto 0); 
-      his_ip_o    : out std_logic_vector(31 downto 0);
-      his_port_o  : out std_logic_vector(15 downto 0); 
-      length_o    : out unsigned(15 downto 0);
-      max_ops_o   : out unsigned(15 downto 0);
-      adr_hi_o    : out std_logic_vector(g_adr_bits_hi-1 downto 0);
-      eb_opt_o    : out t_rec_hdr;
-      
-      udp_raw_o   : out std_logic;
-      udp_we_o    : out std_logic;
-      udp_valid_i : in  std_logic;   
-      udp_data_o  : out std_logic_vector(31 downto 0));
-   end component;
+  
   
   
    component eb_framer is
@@ -338,20 +305,20 @@ package eb_internals_pkg is
     clk_i           : in   std_logic;            -- WB Clock
     rst_n_i         : in   std_logic;            -- async reset
 
-    slave_i         : in   t_wishbone_slave_in;  -- WB op. -> not WB compliant, but the record format is convenient
-    slave_o         : out  t_wishbone_slave_out;  -- flow control    
+    slave_i         : in   t_wishbone_slave_in;  
+    slave_o         : out  t_wishbone_slave_out; 
     master_o        : out  t_wishbone_master_out;
     master_i        : in   t_wishbone_master_in; 
     
     byte_cnt_o      : out  std_logic_vector(15 downto 0);
     ovf_o           : out  std_logic;
+    busy_o          : out  std_logic;
        
     tx_send_now_i   : in   std_logic;
     tx_flush_o      : out  std_logic; 
-    max_ops_i       : in   unsigned(15 downto 0);
     length_i        : in   unsigned(15 downto 0); 
     cfg_rec_hdr_i   : in   t_rec_hdr -- EB cfg information, eg read from cfg space etc
-   );    
+);     
    end component;
   
    component eb_record_gen is
@@ -368,7 +335,8 @@ package eb_internals_pkg is
       rec_adr_rd_o    : out t_wishbone_data; 
       rec_adr_wr_o    : out t_wishbone_address; 
       rec_ack_i       : in std_logic;             
-      byte_cnt_o    : out unsigned(15 downto 0); 
+      byte_cnt_o      : out unsigned(15 downto 0);
+      busy_o          : out  std_logic; 
       cfg_rec_hdr_i   : in t_rec_hdr);   
    end component ;
   

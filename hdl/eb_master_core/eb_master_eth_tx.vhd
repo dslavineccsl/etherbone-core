@@ -32,7 +32,7 @@ entity eb_master_eth_tx is
 end eb_master_eth_tx;
 
 architecture rtl of eb_master_eth_tx is
-  type t_state is (S_ETHERNET, S_IP, S_UDP, S_DONE, S_WAIT, S_PAYLOAD, S_RUNT, S_LOWER, S_COMMIT, S_SKIP, S_PUSH);
+  type t_state is (S_WRF_STATUS, S_ETHERNET, S_IP, S_UDP, S_DONE, S_WAIT, S_PAYLOAD, S_RUNT, S_LOWER, S_SKIP, S_PUSH);
   type t_sum_state is (S_CONST, S_DST_HI, S_DST_LO, S_SRC_HI, S_SRC_LO, S_DONE);
   
   signal r_state  : t_state;
@@ -57,11 +57,13 @@ architecture rtl of eb_master_eth_tx is
   signal s_buf_abort  : std_logic;
   signal s_buf_cyc    : std_logic;
   signal s_buf_data   : std_logic_vector(15 downto 0);
+  signal r_buf_typ    : std_logic;
   
   signal r_tx_cyc   : std_logic;
   signal s_tx_empty : std_logic;
   signal s_tx_pop   : std_logic;
   signal s_tx_cyc   : std_logic;
+  signal s_tx_typ   : std_logic;
   signal s_tx_dat   : std_logic_vector(15 downto 0);
   
   signal r_sum_state : t_sum_state;
@@ -103,8 +105,7 @@ architecture rtl of eb_master_eth_tx is
     ip.tol := std_logic_vector(len+20);
     ip.dst := dst;
     ip.src := src;
-    --ip.sum := not sum;
-    ip.sum := sum;
+    ip.sum := not sum;
     o(o'left downto (c_hdr_len-c_ip_len)*8) := f_format_ip(ip);
     return o;
   end function;
@@ -125,13 +126,11 @@ architecture rtl of eb_master_eth_tx is
     return to_unsigned(x/2 - 1, 5);
   end function;
   
-  
-  
 begin
 
   tx : eb_commit_len_fifo
     generic map(
-      g_width => 17,
+      g_width => 18,
       g_size  => (g_mtu+c_eth_len)/2)
     port map(
       clk_i      => clk_i,
@@ -144,9 +143,11 @@ begin
       r_cnt_o    => s_tx_out_cnt,
       w_cnt_o    => s_tx_in_cnt,
       r_pop_i    => s_tx_pop,
-      w_dat_i(16)          => s_buf_cyc,
+      w_dat_i(17)          => s_buf_cyc,
+      w_dat_i(16)          => r_buf_typ,
       w_dat_i(15 downto 0) => s_buf_data,
-      r_dat_o(16)          => s_tx_cyc,
+      r_dat_o(17)          => s_tx_cyc,
+      r_dat_o(16)          => s_tx_typ,
       r_dat_o(15 downto 0) => s_tx_dat);
   
   slave_o.ack <= r_ack;
@@ -158,22 +159,20 @@ begin
   
   stall_o <= r_ready; -- already have params
   
-  s_stall      <= s_buf_full when r_state=S_PAYLOAD
-            else '1';
+  s_stall      <= s_buf_full when r_state=S_PAYLOAD else '1';
   skip_stall_o <= '0' when r_state=S_SKIP else '1';
   s_buf_stb    <= (slave_i.cyc and slave_i.stb) when r_state=S_PAYLOAD else r_hdr_stb;
   s_buf_push   <= s_buf_stb and not s_buf_full;
   s_buf_abort  <= '1' when r_state=S_SKIP  else '0';
-  s_buf_commit <= '1' when r_state=S_COMMIT else '0';
+  s_buf_commit <= '1' when r_state=S_LOWER else '0';
   s_buf_cyc    <= '0' when r_state=S_LOWER else '1';
   s_buf_data   <= slave_i.dat(15 downto 0) when r_state=S_PAYLOAD else r_shift(r_shift'left downto r_shift'left-15);
-  
   
   hdr : process(clk_i, rst_n_i) is
   begin
     if rst_n_i = '0' then
-      r_state   <= S_ETHERNET;
-      r_staten  <= S_ETHERNET;
+      r_state   <= S_WRF_STATUS;
+      r_staten  <= S_WRF_STATUS;
       r_count   <= (others => '0');
       r_ready   <= '0';
       r_mac     <= (others => '0');
@@ -189,6 +188,8 @@ begin
       
       if s_tx_empty = '0' then
         r_tx_cyc <= s_tx_cyc;
+            else
+        r_tx_cyc <= '0'; 
       end if;
       
       if stb_i = '1' and r_ready = '0' then
@@ -199,9 +200,17 @@ begin
       end if;
       
       case r_state is
-        when S_ETHERNET =>
+        when S_WRF_STATUS =>
           if r_ready = '1' then
             r_hdr_stb <= '1';
+            r_buf_typ <= '1';
+            r_shift   <= (others => '0');
+            r_state   <= S_ETHERNET;
+          end if;
+        
+        when S_ETHERNET =>
+          if s_buf_full = '0' then
+            r_buf_typ <= '0';
             r_shift   <= f_send_eth(r_mac, my_mac_i);
             r_count   <= f_step(c_eth_len);
             r_staten  <= S_IP;
@@ -232,6 +241,8 @@ begin
             -- After payload, may need to add runt padding
             r_shift <= (others => '0');
             
+ 
+            
             -- Make sure we don't skip the payload!
             if slave_i.cyc = '1' then
               r_state <= S_PAYLOAD;
@@ -250,17 +261,17 @@ begin
           end if;
         
         when S_PAYLOAD =>
+          if to_integer(s_tx_in_cnt -2) < c_runt_min then
+            r_staten <= S_RUNT;
+            r_count <= f_step(c_runt_min - to_integer(s_tx_in_cnt -2));
+          else
+            r_staten <= S_LOWER;
+            r_count <= (others => '-');
+          end if;
+
           if slave_i.cyc = '0' then
             r_hdr_stb <= '1';
-            
-            if (s_tx_in_cnt-2) < c_runt_min then
-              r_state <= S_RUNT;
-              r_count <= f_step(c_runt_min - to_integer(s_tx_in_cnt-2));
-            else
-              r_state <= S_LOWER;
-              r_count <= (others => '-');
-            end if;
-            
+            r_state <= r_staten;
           end if;
         
         when S_RUNT =>
@@ -272,18 +283,11 @@ begin
         when S_LOWER =>
           if s_buf_full = '0' then
             r_hdr_stb <= '0';
-            r_state <= S_COMMIT;
+            r_state <= S_WRF_STATUS;
           end if;
-          
-        when S_COMMIT =>
-          if s_buf_full = '0' then
-            r_state <= S_ETHERNET;
-          end if;  
-          
         
         when S_SKIP =>
-          r_hdr_stb <= '0';
-          r_state <= S_ETHERNET;
+          r_state <= S_WRF_STATUS;
         
         when S_PUSH =>
           if s_buf_full = '0' then
@@ -296,17 +300,12 @@ begin
           end if;
           
       end case;
-      
-      --get us out if nothing else helps
-      if skip_stb_i = '1' then
-         r_state <= S_SKIP;
-      end if;
     end if;
   end process;
 
   src_o.cyc <= s_tx_cyc when s_tx_empty='0' else r_tx_cyc;
   src_o.stb <= not s_tx_empty and s_tx_payload;
-  src_o.adr <= c_WRF_DATA;
+  src_o.adr <= c_WRF_STATUS when s_tx_typ='1' else c_WRF_DATA;
   src_o.we  <= '1';
   src_o.sel <= "11";
 
@@ -319,15 +318,15 @@ begin
              else '1';
   
   -- Flag for TOL field, high when present on s_tx_dat 
-  s_ip_tol_ins <= '1' when (s_tx_out_cnt -2)  = (c_eth_len + c_ip_tol_pos)
+  s_ip_tol_ins <= '1' when (s_tx_out_cnt -4)  = (c_eth_len + c_ip_tol_pos)
              else '0';
   
   -- Flag for Checksum field, high when present on s_tx_dat            
-  s_ip_chk_ins <= '1' when (s_tx_out_cnt -2) = (c_eth_len + c_ip_chk_pos)
+  s_ip_chk_ins <= '1' when (s_tx_out_cnt -4) = (c_eth_len + c_ip_chk_pos)
              else '0';
              
   -- Flag for TOL field, high when present on s_tx_dat 
-  s_udp_len_ins <= '1' when (s_tx_out_cnt -2)  = (c_eth_len + c_ip_len + c_udp_len_pos)
+  s_udp_len_ins <= '1' when (s_tx_out_cnt -4)  = (c_eth_len + c_ip_len + c_udp_len_pos)
              else '0';                      
   
   -- Correct checksum including TOL, valid on s_ip_chk_ins HI
@@ -348,8 +347,8 @@ begin
    begin
       if rising_edge(clk_i) then
          if( s_tx_empty = '0' and s_tx_payload = '0') then
-             r_ip_tol <=  std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len, s_tx_dat'length) - 2); -- deduct eth hdr length and OOB length element
-             r_udp_len <= std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len + c_ip_len, s_tx_dat'length) - 2);
+             r_ip_tol <=  std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len, s_tx_dat'length) -2); -- deduct eth hdr length and OOB length element
+             r_udp_len <= std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len + c_ip_len, s_tx_dat'length) -2);
          end if;
       end if;   
    end process;

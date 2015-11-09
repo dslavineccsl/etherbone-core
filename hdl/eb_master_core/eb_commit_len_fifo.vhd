@@ -124,11 +124,26 @@ begin
     elsif rising_edge(clk_i) then
       r_idx <= r_idx1;
       
+      if w_push_i = '1' then
+        r_len    <= r_len + to_unsigned((g_width/8), r_len'length);
+      end if;
+
+      if r_pop_i = '1' then
+         r_cnt   <= r_cnt + to_unsigned((g_width/8), r_cnt'length);
+      end if;
+      
+
       if w_commit_i = '1' then
+        
+        
         r_cnt     <= (others => '0');
+        
+
         r_len     <= (others => '0'); 
-        e_idx     <= w_idx1;
-        w_idx     <= w_idx1 +1;
+        
+        
+        e_idx     <= w_idx;
+        w_idx     <= w_idx1;
       elsif w_abort_i = '1' then
         r_len <= (others => '0');
         r_cnt <= (others => '0');
@@ -137,9 +152,7 @@ begin
         w_idx <= w_idx1;    
       end if;
       
-      if w_push_i = '1' then
-         r_len    <= r_len + to_unsigned((g_width/8), r_len'length); 
-      end if;
+      
     
       
       -- Compare the newest pointers
@@ -150,15 +163,12 @@ begin
       end if;
       
       -- Use the OLD write pointer to prevent read-during-write
-      if e_idx = r_idx1 then
+      if r_idx1 = e_idx then
         r_empty_o <= '1';
       else
         r_empty_o <= '0';
       end if;
       
-      if r_pop_i = '1' then
-         r_cnt   <= r_cnt + to_unsigned((g_width/8), r_cnt'length);
-      end if;
       
     end if;
   end process;
