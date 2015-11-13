@@ -209,19 +209,21 @@ package body eb_hdr_pkg is
   end function;
    
   function f_parse_rec(x : std_logic_vector) return t_rec_hdr is
+    variable y : std_logic_vector(31 downto 0);   
     variable o : t_rec_hdr;
   begin
-    o.bca_cfg  := x(31);
-    o.rca_cfg  := x(30);
-    o.rd_fifo  := x(29);
-    o.res1     := x(28);
-    o.drop_cyc := x(27);
-    o.wca_cfg  := x(26);
-    o.wr_fifo  := x(25);
-    o.res2     := x(24);
-    o.sel      := x(23 downto 16);
-    o.wr_cnt   := unsigned(x(15 downto 8));
-    o.rd_cnt   := unsigned(x( 7 downto 0));
+    y := x;
+    o.bca_cfg  := y(31);
+    o.rca_cfg  := y(30);
+    o.rd_fifo  := y(29);
+    o.res1     := y(28);
+    o.drop_cyc := y(27);
+    o.wca_cfg  := y(26);
+    o.wr_fifo  := y(25);
+    o.res2     := y(24);
+    o.sel      := y(23 downto 16);
+    o.wr_cnt   := unsigned(y(15 downto 8));
+    o.rd_cnt   := unsigned(y( 7 downto 0));
     return o;
   end function;
    
