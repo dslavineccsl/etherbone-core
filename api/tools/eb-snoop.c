@@ -57,7 +57,7 @@ static void help(void) {
   fprintf(stderr, "  -h             display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
-  fprintf(stderr, "Version %"PRIx32" (%s). Licensed under the LGPL v3.\n", EB_VERSION_SHORT, EB_DATE_FULL);
+  fprintf(stderr, "Version: %s\n%s\nLicensed under the LGPL v3.\n", eb_source_version(), eb_build_info());
 }
 
 static eb_status_t my_read(eb_user_data_t user, eb_address_t req_address, eb_width_t width, eb_data_t* data) {
@@ -219,8 +219,8 @@ int main(int argc, char** argv) {
   
   device.sdb_component.product.vendor_id = 0x651; /* GSI */
   device.sdb_component.product.device_id = 0xc3c5eefa;
-  device.sdb_component.product.version = EB_VERSION_SHORT;
-  device.sdb_component.product.date = EB_DATE_SHORT;
+  device.sdb_component.product.version = 0x101;
+  device.sdb_component.product.date = 0x20151207;
   device.sdb_component.product.record_type = sdb_record_device;
   
   memcpy(device.sdb_component.product.name, "Software-Memory    ", sizeof(device.sdb_component.product.name));

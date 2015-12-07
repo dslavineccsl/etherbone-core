@@ -269,6 +269,14 @@ extern "C" {
 /*                                 C99 API                                  */
 /****************************************************************************/
 
+/* Format: #.# (git-id): MMM DD YYYY HH:MM:SS */
+EB_PUBLIC
+const char* eb_source_version(void);
+
+/* Format: built by USERNAME on MMM DD YYYY HH:MM:SS with HOSTNAME running OPERATING-SYSTEM */
+EB_PUBLIC
+const char* eb_build_info(void);
+
 /* Convert status to a human-readable printable string */
 EB_PUBLIC
 const char* eb_status(eb_status_t code);

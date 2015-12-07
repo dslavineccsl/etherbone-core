@@ -1,9 +1,7 @@
-/** @file version.h
+/** @file version.c
  *  @brief Report the version and date of the source code.
  *
  *  Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH 
- *
- *  We reserved the low 8K memory region for this device.
  *
  *  @author Wesley W. Terpstra <w.terpstra@gsi.de>
  *
@@ -25,15 +23,24 @@
  *******************************************************************************
  */
 
-#ifndef VERSION_H
-#define VERSION_H
-
 #include <inttypes.h>
+#include "version.h"
+#include "config.h"
 
-#define EB_VERSION_FULL "@EB_VERSION_FULL@"
-#define EB_DATE_FULL    "@EB_DATE_FULL@"
+const uint32_t eb_version_short = UINT32_C(0x@EB_VERSION_SHORT@);
+const uint32_t eb_date_short    = UINT32_C(0x@EB_DATE_SHORT@);
 
-#define EB_VERSION_SHORT (uint32_t)UINT32_C(0x@EB_VERSION_SHORT@)
-#define EB_DATE_SHORT    (uint32_t)UINT32_C(0x@EB_DATE_SHORT@)
+static const char source_version[] =
+  PACKAGE_STRING " (@EB_VERSION_FULL@): @EB_DATE_FULL@";
+static const char build_info[] =
+  "built by " USERNAME " on " __DATE__ " " __TIME__ " with " HOSTNAME " running " OPERATING_SYSTEM;
 
-#endif
+const char* eb_source_version(void)
+{
+  return source_version;
+}
+
+const char* eb_build_info(void)
+{
+  return build_info;
+}

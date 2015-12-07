@@ -67,8 +67,8 @@ static eb_data_t eb_sdb_interconnect(eb_width_t width, eb_address_t addr, int de
   
   interconnect.sdb_component.product.vendor_id  = htobe64(0x651); /* GSI */
   interconnect.sdb_component.product.device_id  = htobe32(0x02398114);
-  interconnect.sdb_component.product.version    = htobe32(EB_VERSION_SHORT);
-  interconnect.sdb_component.product.date       = htobe32(EB_DATE_SHORT);
+  interconnect.sdb_component.product.version    = htobe32(eb_version_short);
+  interconnect.sdb_component.product.date       = htobe32(eb_date_short);
   interconnect.sdb_component.product.record_type = sdb_record_interconnect;
 
   memcpy(&interconnect.sdb_component.product.name[0], "Software-EB-Bus    ", sizeof(interconnect.sdb_component.product.name));

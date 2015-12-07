@@ -59,7 +59,7 @@ static void help(void) {
   fprintf(stderr, "  -h             display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Report Etherbone bugs to <etherbone-core@ohwr.org>\n");
-  fprintf(stderr, "Version %"PRIx32" (%s). Licensed under the LGPL v3.\n", EB_VERSION_SHORT, EB_DATE_FULL);
+  fprintf(stderr, "Version: %s\n%s\nLicensed under the LGPL v3.\n", eb_source_version(), eb_build_info());
 }
 
 static eb_data_t data;

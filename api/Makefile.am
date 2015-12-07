@@ -6,7 +6,7 @@ lib_LTLIBRARIES = libetherbone.la
 bin_PROGRAMS    = tools/eb-read tools/eb-write tools/eb-put tools/eb-get tools/eb-snoop tools/eb-ls tools/eb-find #tools/eb-tunnel tools/eb-discover
 EXTRA_PROGRAMS  = test/sizes test/loopback test/etherbonetest
 pkg_DATA	= etherbone.pc
-EXTRA_DIST	= etherbone.pc.in glue/version.h.in glue/version.h
+EXTRA_DIST	= etherbone.pc.in glue/version.c.in
 
 SOURCES =				\
 	memory/dynamic.c		\
@@ -55,23 +55,24 @@ SOURCES =				\
 	glue/cplusplus.cpp
 
 if GIT_TREE
-glue/version.h: glue/version.h.in $(SOURCES)
-	git log -n1 --pretty="format:%H" . > git.version_full
-	git log -n1 --pretty="format:%ci" . > git.date_full
-	cut -b1-8 < git.version_full > git.version_short
-	date +%Y%m%d -f git.date_full > git.date_short
+glue/version.c: glue/version.c.in Makefile $(SOURCES)
+	git log -n1 --pretty="format:%ci" . > git.date
+	date +'%b %e %Y %H:%M:%S' -f git.date > git.date_full
+	date +'%Y%m%d'            -f git.date > git.date_short
+	git log -n1 --pretty="format:%H" . > git.version
+	git describe --always --tags --dirty > git.version_full
+	cut -b1-8 < git.version > git.version_short
 	sed 's/@EB_VERSION_FULL@/'"`cat git.version_full`"'/;s/@EB_VERSION_SHORT@/'"`cat git.version_short`"'/;s/@EB_DATE_FULL@/'"`cat git.date_full`"'/;s/@EB_DATE_SHORT@/'"`cat git.date_short`"'/' < $< > $@.tmp
-	rm -f $@.tmp git.version_full git.date_full git.version_short git.date_short
+	rm -f git.version_full git.date_full git.version_short git.date_short git.version git.date
 	mv $@.tmp $@
 endif
 
-libetherbone_la_LDFLAGS = -version-info 2:1:0
-libetherbone_la_SOURCES = $(SOURCES) glue/version.h
-#FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic untill table overflow (default)
+libetherbone_la_LDFLAGS = -version-info 1:1:0
+libetherbone_la_SOURCES = $(SOURCES) glue/version.h glue/version.c
+
+#FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic until table overflow (default)
 #FLAGS	:= $(FLAGS) -DEB_USE_STATIC=200 # fully deterministic
 #FLAGS	:= $(FLAGS) -DEB_USE_MALLOC     # non-deterministic
-#FLAGS	:= $(FLAGS) -DDISABLE_SLAVE
-#FLAGS	:= $(FLAGS) -DDISABLE_MASTER
 
 LDADD = libetherbone.la
 
