@@ -1,6 +1,22 @@
-*/*.o
-etherbone.def
-etherbone.dll
-libetherbone.dll.a
-libetherbone.a
-libetherbone.so*
+# Targets
+libetherbone.la
+# Compilation junk
+*.lo
+*.o
+.libs
+.deps
+.dirstamp
+# Automake junk
+aclocal.m4
+auto
+autom4te.cache
+config.h
+config.h.in
+config.log
+config.status
+configure
+etherbone.pc
+libtool
+Makefile.in
+Makefile
+stamp-h1
