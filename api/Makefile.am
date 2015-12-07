@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I auto
 
 include_HEADERS = etherbone.h
 lib_LTLIBRARIES = libetherbone.la
-bin_PROGRAMS    = tools/eb-read tools/eb-write tools/eb-put tools/eb-get tools/eb-snoop tools/eb-ls tools/eb-find #tools/eb-tunnel tools/eb-discover
+bin_PROGRAMS    = tools/eb-read tools/eb-write tools/eb-put tools/eb-get tools/eb-snoop tools/eb-ls tools/eb-find tools/eb-tunnel tools/eb-discover
 EXTRA_PROGRAMS  = test/sizes test/loopback test/etherbonetest
 pkg_DATA	= etherbone.pc
 EXTRA_DIST	= etherbone.pc.in glue/version.c.in
@@ -83,8 +83,14 @@ tools_eb_get_SOURCES	= tools/eb-get.c
 tools_eb_snoop_SOURCES	= tools/eb-snoop.c
 tools_eb_ls_SOURCES	= tools/eb-ls.c
 tools_eb_find_SOURCES	= tools/eb-find.c
-#tools_eb_tunnel_SOURCES	= tools/eb-tunnel.c
-#tools_eb_discover_SOURCES= tools/eb-discover.c
+
+tools_eb_tunnel_SOURCES = tools/eb-tunnel.c transport/posix-ip.c transport/posix-udp.c transport/posix-tcp.c glue/strncasecmp.c
+tools_eb_tunnel_CFLAGS  = $(AM_CFLAGS)
+tools_eb_tunnel_LDADD   =
+
+tools_eb_discover_SOURCES= tools/eb-discover.c transport/posix-ip.c transport/posix-udp.c glue/strncasecmp.c
+tools_eb_discover_CFLAGS = $(AM_CFLAGS)
+tools_eb_discover_LDADD  =
 
 test_sizes_SOURCES	= test/sizes.c
 test_loopback_SOURCES	= test/loopback.cpp
