@@ -37,7 +37,7 @@
 typedef int socklen_t;
 typedef SOCKET eb_posix_sock_t;
 #else
-#define _POSIX_C_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
