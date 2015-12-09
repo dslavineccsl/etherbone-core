@@ -1,4 +1,4 @@
-pkgdir = @libddir@/pkgconfig
+pkgdir = @libdir@/pkgconfig
 ACLOCAL_AMFLAGS = -I auto
 
 include_HEADERS = etherbone.h
