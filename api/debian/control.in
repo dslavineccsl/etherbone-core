@@ -12,7 +12,11 @@ Package: libetherbone-dev
 Section: libdevel
 Architecture: any
 Depends: libetherbone@ETHERBONE_SONAME@ (= ${binary:Version}), ${misc:Depends}
-Description: serial protocol for transporting the pipelined Wishbone bus
+Description: serial protocol for the Wishbone bus - development files
+ The Wishbone bus is an open bus standard used in system-on-chip projects.
+ It is a memory mapped interconnect which aggregates pipelined slaves. Each
+ slave is enumerated and described by meta-data found inside the SoC.
+ .
  This library provides a C API suitable for use on Linux, Windows, and
  embedded devices. See etherbone.h for API documentation. The API is
  non-blocking, but if no callback is provided it will internally block
@@ -23,7 +27,11 @@ Description: serial protocol for transporting the pipelined Wishbone bus
 Package: libetherbone@ETHERBONE_SONAME@
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: serial protocol for transporting the pipelined Wishbone bus
+Description: serial protocol for the Wishbone bus - library
+ The Wishbone bus is an open bus standard used in system-on-chip projects.
+ It is a memory mapped interconnect which aggregates pipelined slaves. Each
+ slave is enumerated and described by meta-data found inside the SoC.
+ .
  This library provides a C API suitable for use on Linux, Windows, and
  embedded devices. See etherbone.h for API documentation. The API is
  non-blocking, but if no callback is provided it will internally block
@@ -34,7 +42,11 @@ Description: serial protocol for transporting the pipelined Wishbone bus
 Package: etherbone-tools
 Architecture: any
 Depends: libetherbone@ETHERBONE_SONAME@ (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: serial protocol for transporting the pipelined Wishbone bus
+Description: serial protocol for the Wishbone bus - command-line tools
+ The Wishbone bus is an open bus standard used in system-on-chip projects.
+ It is a memory mapped interconnect which aggregates pipelined slaves. Each
+ slave is enumerated and described by meta-data found inside the SoC.
+ .
  This library provides a C API suitable for use on Linux, Windows, and
  embedded devices. See etherbone.h for API documentation. The API is
  non-blocking, but if no callback is provided it will internally block
