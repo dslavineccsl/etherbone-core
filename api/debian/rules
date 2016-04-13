@@ -19,4 +19,4 @@ include /usr/share/dpkg/default.mk
 
 # main packaging script based on dh7 syntax
 %:
-	dh $@  --with autotools-dev
+	dh $@  --with autotools-dev --parallel

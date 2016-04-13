@@ -1,9 +1,11 @@
 #! /bin/sh
+JOBS=${JOBS:-4} # run 4 commands at once
+
 cd $(dirname $(readlink -e "$0"))
 set -ex
 ./autogen.sh
 ./configure --enable-maintainer-mode
-make distcheck
+make -j $JOBS distcheck
 
 tarball=$(echo etherbone-*.tar.gz)
 ver=${tarball##*-}
@@ -17,4 +19,4 @@ cd deb
 tar xvzf $orig
 cp -a ../debian etherbone-${ver}/
 cd etherbone-${ver}
-debuild
+debuild -eDEB_BUILD_OPTIONS="parallel=$JOBS" 
