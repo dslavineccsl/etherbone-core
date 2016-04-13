@@ -1,0 +1,38 @@
+Etherbone is a serial protocol for transporting the pipelined Wishbone bus.
+
+This library provides a C API suitable for use on Linux, Windows, and
+embedded devices. See etherbone.h for API documentation. The API is
+non-blocking, but if no callback is provided it will internally block
+requests upon termination of a cycle.
+
+A simple example (add error handling in a real program):
+
+	eb_socket_t socket;
+	eb_device_t device;
+	eb_cycle_t cycle;
+
+	/* Open the socket to be used by this thread for all library access */
+	eb_socket_open(EB_ABI_CODE, 0, EB_DATAX|EB_ADDRX, &socket);
+
+	/* Open a local PCIe device to be controlled */
+	eb_device_open(socket, "dev/wbm0", EB_DATAX|EB_ADDRX, 3, &device);
+
+	/* Perform a simple blocking write of 0xdeadbeef to address 0x100 */
+	eb_device_write(device, 0x100, EB_DATA32|EB_BIG_ENDIAN, 0xdeadbeef, 0, 0);
+
+	/* Perform two writes atomically (in the same cycle) and blocking */
+	eb_cycle_open(device, 0, 0, &cycle);
+	eb_cycle_write(cycle, 0x100, EB_DATA32|EB_BIG_ENDIAN, 0xdeadbeef);
+	eb_cycle_write(cycle, 0x104, EB_DATA32|EB_BIG_ENDIAN, 0xcafebabe);
+	eb_cycle_close(cycle); /* program blocks here until writes complete */
+
+	/* Perform a write and a read atomically, with the result being
+	 * delivered to a callback.
+	 */
+	eb_cycle_open(device, &my_fun, 0, &cycle);
+	eb_cycle_write(cycle, 0x100, EB_DATA32|EB_BIG_ENDIAN, 0xdeadbeef);
+	eb_cycle_write(cycle, 0x104, EB_DATA32|EB_BIG_ENDIAN, 0xcafebabe);
+	eb_cycle_close(cycle); /* This enqueues the cycle for sending */
+
+	/* Run the main event-loop, firing callbacks as required */
+	eb_socket_run(socket, -1);

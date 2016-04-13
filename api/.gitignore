@@ -7,6 +7,7 @@ libetherbone.la
 .deps
 .dirstamp
 # Automake junk
+ChangeLog
 aclocal.m4
 auto
 autom4te.cache
@@ -20,3 +21,4 @@ libtool
 Makefile.in
 Makefile
 stamp-h1
+etherbone-*.tar.gz
