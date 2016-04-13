@@ -6,6 +6,7 @@ libetherbone.la
 .libs
 .deps
 .dirstamp
+deb
 # Automake junk
 ChangeLog
 aclocal.m4
