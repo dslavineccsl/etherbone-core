@@ -1,3 +1,9 @@
+etherbone (1.2.1-1) unstable; urgency=low
+
+  * Fixed libtool versioning
+
+ -- Wesley W. Terpstra <terpstra@debian.org>  Wed, 13 Apr 2016 18:57:58 +0200
+
 etherbone (1.2.0-1) unstable; urgency=low
 
   * Initial release
