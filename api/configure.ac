@@ -1,6 +1,12 @@
+dnl Set these variables before each release:
+m4_define(MAJOR,1)    dnl Increment if removed/changed properties/signals/methods since previous release
+m4_define(MINOR,2)    dnl Increment if added properties/signals/methods; reset to 0 if MAJOR changed
+m4_define(REVISION,0) dnl Increment on each release; reset to 0 if MAJOR/MINOR changed
+m4_define(API,3)      dnl Whenever MAJOR is incremented, add MINOR to this variable
+
 AC_PREREQ(2.63)
 
-AC_INIT([etherbone], [1.2])
+AC_INIT([etherbone], MAJOR.MINOR.REVISION)
 AC_CONFIG_SRCDIR([glue/socket.c])
 AC_CONFIG_MACRO_DIR([auto])
 AC_CONFIG_AUX_DIR([auto])
@@ -38,6 +44,12 @@ AC_DEFINE_UNQUOTED([USERNAME], ["${USERNAME:-${LOGNAME:-${USER:-unknown}}}"], [T
 
 AC_PATH_PROGS([GIT], [git])
 AM_CONDITIONAL([GIT_TREE], [test x$GIT != x -a -e ../.git])
+
+AC_SUBST([ETHERBONE_MAJOR], MAJOR)
+AC_SUBST([ETHERBONE_MINOR], MINOR)
+AC_SUBST([ETHERBONE_REVISION], REVISION)
+AC_SUBST([ETHERBONE_API], API)
+AC_SUBST([ETHERBONE_SONAME], [$((API-MINOR))]) dnl soname equals oldest API with nothing removed
 
 AC_CONFIG_FILES([Makefile etherbone.pc])
 AC_OUTPUT

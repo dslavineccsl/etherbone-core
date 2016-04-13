@@ -65,9 +65,13 @@ glue/version.c: glue/version.c.in Makefile $(SOURCES)
 	sed 's/@EB_VERSION_FULL@/'"`cat git.version_full`"'/;s/@EB_VERSION_SHORT@/'"`cat git.version_short`"'/;s/@EB_DATE_FULL@/'"`cat git.date_full`"'/;s/@EB_DATE_SHORT@/'"`cat git.date_short`"'/' < $< > $@.tmp
 	rm -f git.version_full git.date_full git.version_short git.date_short git.version git.date
 	mv $@.tmp $@
+debian:
+	cp debian/libetherbone.install.in debian/libetherbone@ETHERBONE_SONAME@.install
+	./config.status --file=debian/control
+.PHONY: debian
 endif
 
-libetherbone_la_LDFLAGS = -version-info 1:1:0
+libetherbone_la_LDFLAGS = -version-info @ETHERBONE_API@:@ETHERBONE_REVISION@:@ETHERBONE_MINOR@ # @ETHERBONE_SONAME@
 libetherbone_la_SOURCES = $(SOURCES) glue/version.h glue/version.c
 
 #FLAGS	:= $(FLAGS) -DEB_USE_DYNAMIC    # deterministic until table overflow (default)

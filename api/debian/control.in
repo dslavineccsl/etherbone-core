@@ -11,7 +11,7 @@ Vcs-Browser: http://www.ohwr.org/projects/etherbone-core/repository/revisions/ma
 Package: libetherbone-dev
 Section: libdevel
 Architecture: any
-Depends: libetherbone1 (= ${binary:Version}), ${misc:Depends}
+Depends: libetherbone@ETHERBONE_SONAME@ (= ${binary:Version}), ${misc:Depends}
 Description: serial protocol for transporting the pipelined Wishbone bus
  This library provides a C API suitable for use on Linux, Windows, and
  embedded devices. See etherbone.h for API documentation. The API is
@@ -20,7 +20,7 @@ Description: serial protocol for transporting the pipelined Wishbone bus
  .
  Development files for building an application dependent on this library.
 
-Package: libetherbone1
+Package: libetherbone@ETHERBONE_SONAME@
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: serial protocol for transporting the pipelined Wishbone bus
@@ -33,7 +33,7 @@ Description: serial protocol for transporting the pipelined Wishbone bus
 
 Package: etherbone-tools
 Architecture: any
-Depends: libetherbone1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: libetherbone@ETHERBONE_SONAME@ (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: serial protocol for transporting the pipelined Wishbone bus
  This library provides a C API suitable for use on Linux, Windows, and
  embedded devices. See etherbone.h for API documentation. The API is

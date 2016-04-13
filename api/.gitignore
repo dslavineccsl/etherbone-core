@@ -23,3 +23,6 @@ Makefile.in
 Makefile
 stamp-h1
 etherbone-*.tar.gz
+build
+debian/control
+debian/libetherbone1.install
