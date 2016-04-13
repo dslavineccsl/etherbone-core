@@ -1,6 +1,6 @@
 AC_PREREQ(2.63)
 
-AC_INIT([etherbone], [1.1])
+AC_INIT([etherbone], [1.2])
 AC_CONFIG_SRCDIR([glue/socket.c])
 AC_CONFIG_MACRO_DIR([auto])
 AC_CONFIG_AUX_DIR([auto])
