@@ -71,7 +71,7 @@ manpage.1: manpage.sgml
   <refsect1>
     <title>DESCRIPTION</title>
 
-    <para> <command>&dhpackage;</command> is a a tool which lists all devices attached to a remote Wishbone bus. </para>
+    <para> <command>&dhpackage;</command> is a tool which lists all devices attached to a remote Wishbone bus. </para>
 
     <para> The  mandatory parameter  &lt;proto/host/port&gt; specifies
     the  Wishbone bus.  Examples  are "dev/wbm0"  for  a Wishbone  bus
