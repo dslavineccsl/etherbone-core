@@ -41,7 +41,7 @@ static eb_width_t address_width, data_width;
 static int verbose, quiet;
 
 static void help(void) {
-  fprintf(stderr, "Usage: %s [OPTION] <proto/host/port> <address/size> <value>\n", program);
+  fprintf(stderr, "Usage: %s [OPTION] <proto/host/port>\n", program);
   fprintf(stderr, "\n");
   fprintf(stderr, "  -a <width>     acceptable address bus widths     (8/16/32/64)\n");
   fprintf(stderr, "  -d <width>     acceptable data bus widths        (8/16/32/64)\n");
