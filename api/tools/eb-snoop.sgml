@@ -66,7 +66,7 @@ manpage.1: manpage.sgml
       <arg><option>OPTION</option></arg> 
       <arg choice="req">&lt;port&gt;</arg>
       <arg choice="req">&lt;startAdress&gt;-&lt;endAdress&gt;</arg>
-      <arg><option>passive-open-address</arg>
+      <arg><option>passive-open-address</option></arg>
     
     </cmdsynopsis>
   </refsynopsisdiv>
@@ -214,7 +214,7 @@ manpage.1: manpage.sgml
     <title>AUTHOR</title>
 
     <para>man page: &dhusername; &dhemail</para>
-    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;
+    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;</para>
   </refsect1>
 
   <refsect1>

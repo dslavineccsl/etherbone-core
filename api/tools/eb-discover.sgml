@@ -88,6 +88,7 @@ manpage.1: manpage.sgml
       On a computer connected to the White Rabbit network,
       do "eb-discover udp/10.254.252.128". 
     </para>
+  </refsect1>
   <refsect1>
     <title>SEE ALSO</title>
     <para>eb-write (1), eb-read (1),  eb-put (1), eb-get (1), eb-ls (1), eb-find (1), eb-tunnel (1), eb-snoop.</para>
@@ -123,7 +124,7 @@ manpage.1: manpage.sgml
     <title>AUTHOR</title>
 
     <para>man page: &dhusername; &dhemail</para>
-    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;
+    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;</para>
   </refsect1>
 
   <refsect1>

@@ -252,7 +252,7 @@ manpage.1: manpage.sgml
     <title>AUTHOR</title>
 
     <para>man page: &dhusername; &dhemail</para>
-    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;
+    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;</para>
   </refsect1>
 
   <refsect1>
