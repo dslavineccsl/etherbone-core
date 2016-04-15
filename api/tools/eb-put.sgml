@@ -1,0 +1,283 @@
+<!doctype refentry PUBLIC "-//OASIS//DTD DocBook V4.1//EN" [
+
+<!-- Process this file with docbook-to-man to generate an nroff manual
+     page: `docbook-to-man manpage.sgml > manpage.1'.  You may view
+     the manual page with: `docbook-to-man manpage.sgml | nroff -man |
+     less'.  A typical entry in a Makefile or Makefile.am is:
+
+manpage.1: manpage.sgml
+	docbook-to-man $< > $@
+
+    
+	The docbook-to-man binary is found in the docbook-to-man package.
+	Please remember that if you create the nroff version in one of the
+	debian/rules file targets (such as build), you will need to include
+	docbook-to-man in your Build-Depends control field.
+
+  -->
+
+  <!-- Fill in your name for FIRSTNAME and SURNAME. -->
+  <!ENTITY dhfirstname "<firstname>Dietrich</firstname>">
+  <!ENTITY dhsurname   "<surname>Beck</surname>">
+  <!-- Please adjust the date whenever revising the manpage. -->
+  <!ENTITY dhdate      "<date>April 13, 2016</date>">
+  <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
+       allowed: see man(7), man(1). -->
+  <!ENTITY dhsection   "<manvolnum>1</manvolnum>">
+  <!ENTITY dhemail     "<email>d.beck@gsi.de</email>">
+  <!ENTITY dhusername  "Dietrich Beck">
+  <!ENTITY dhucpackage "<refentrytitle>eb-put</refentrytitle>">
+  <!ENTITY dhpackage   "eb-put">
+
+  <!ENTITY debian      "<productname>Debian</productname>">
+  <!ENTITY gnu         "<acronym>GNU</acronym>">
+  <!ENTITY gpl         "&gnu; <acronym>GPL</acronym>">
+]>
+
+<refentry>
+  <refentryinfo>
+    <address>
+      &dhemail;
+    </address>
+    <author>
+      &dhfirstname;
+      &dhsurname;
+    </author>
+    <copyright>
+      <year>2012</year>
+      <holder>&dhusername;</holder>
+    </copyright>
+    &dhdate;
+  </refentryinfo>
+  <refmeta>
+    &dhucpackage;
+
+    &dhsection;
+  </refmeta>
+  <refnamediv>
+    <refname>&dhpackage;</refname>
+
+    <refpurpose>copies data from a file to a Wishbone address range</refpurpose>
+  </refnamediv>
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      
+      <command>&dhpackage;</command>
+      <arg><option>OPTION</option></arg> 
+      <arg choice="req">&lt;proto/host/port&gt;</arg>
+      <arg choice="req">&lt;address&gt;</arg>
+      <arg choice="req">&lt;filename&gt;</arg>
+    
+    </cmdsynopsis>
+  </refsynopsisdiv>
+  <refsect1>
+    <title>DESCRIPTION</title>
+
+    <para>
+      <command>&dhpackage;</command> is a tool that copies data
+      from a file on the local host sytem to an address range on a
+      remote Wishbone bus.
+    </para>
+
+    <para>
+      The mandatory parameter &lt;proto/host/port&gt; specifies the
+      Wishbone bus. Examples are "dev/wbm0" for a Wishbone bus connected
+      on  the local host, or "udp/192.168.65.1" for a remote one.
+    </para>
+
+    <para>
+      The mandatory parameter &lt;address&gt; specifies the start
+      address within the Wishbone address space to which data should be
+      copied.
+    </para>
+
+    <para>
+      The mandatory parameter &lt;filename&gt specifies the file, from 
+      which the data will be copied.
+    </para>
+
+    <para>
+      A typical use-case of this tool is to copy firmware from a
+      local file system to an embedded lm32 soft-core connected to a
+      remote Wishbone bus. Please note, that one needs to enable the reset
+      line of the lm32 prior to uploading the firmware. After uploading,
+      the reset line must be released again.
+    </para>
+
+  </refsect1>
+  <refsect1>
+    <title>OPTIONS</title>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>-a &lt;width&gt;</option></term>
+        <listitem>
+          <para>Sets acceptable address bus width (8/16/32/64).</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-d &lt;width&gt;</option></term>
+        <listitem>
+          <para>Sets acceptable data bus width (8/16/32/64).</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-c &lt;cycles&gt;</option></term>
+        <listitem>
+          <para>Sets the number of cycles to pack per Etherbone packet (auto).</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-b</option></term>
+        <listitem>
+          <para>Use big-endian operation.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-l</option></term>
+        <listitem>
+          <para>Use little-endian operation.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-r &lt;retries&gt;</option></term>
+        <listitem>
+	  <para>
+	    Sets number of times to attempt autonegotiation (3). This is important when using
+	    a protocol such as UDP. Certain parameters for communication must be negotiated.
+	    The number of retries can be controlled by this parameter.
+	  </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-f</option></term>
+        <listitem>
+          <para>Use forced processing; ignore remote segfaults.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-p</option></term>
+        <listitem>
+          <para>
+	    Disable self-describing Wishbone device probe. There is a lot of checking
+	    behind the scenes to ensure all corner cases within the communication are
+	    handled. One usecase for using this option is to access an address outside
+	    the address space of the devices attached to the Wishbone bus.
+	  </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-v</option></term>
+        <listitem>
+          <para>Verbose operation. Show more details.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-q</option></term>
+        <listitem>
+          <para>Quiet operation. Do not display warnings.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-h</option></term>
+        <listitem>
+          <para>Display this help and exit.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>EXAMPLE</title>
+
+    <para>
+      The parameters of this examples depend on the Wishbone architecture and platform.
+      This example is for GSI Timing Receivers on April 2016.
+    </para>
+
+    <para>
+      First, the architecture should be checked using "eb-ls dev/wbm0". Look "LM32-RAM-User".
+      The following assumes one would like to upload firmware to the 3rd core at address 0x330000.
+    </para>
+
+    <para>
+      Second, we need to use the reset controller attached to the Wishbone bus.
+      The reset controller is at address 0x0. The four byte register 0x4 contains the reset states
+      of the lm32 CPUs. The four byte register 0x8 is used to enable the reset lines of the lm32 CPUs.
+      The four byte register 0xC is used to release the lm32 CPUs from the reset state. In this example,
+      we need to "eb-write dev/wbm0 0x8/4 0x4" to set the 3rd lm32 into reset state.
+    </para>
+
+    <para>
+      Third, "eb-put -v dev/wbm0 0x330000 firmware.bin" uploads the firmware to the 3rd lm32.
+    </para>
+
+    <para>
+      Fourth, "eb-write dev/wbm0 0xC/4 0x4" releases the 3rd lm32 from the reset state.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>SEE ALSO</title>
+    <para>eb-write (1), eb-read (1), eb-get (1), eb-ls (1), eb-find (1), eb-discover (1), eb-tunnel (1), eb-snoop.</para>
+  </refsect1>
+ <refsect1>
+    <title>COPYRIGHT</title>
+
+    <para>
+    Copyright (C) 2011-2012 GSI Helmholtz Centre for Heavy Ion Research GmbH
+    </para>
+
+    <para>
+      This library is free software; you can redistribute it and/or
+      modify it under the terms of the GNU Lesser General Public
+      License as published by the Free Software Foundation; either
+      version 3 of the License, or (at your option) any later version.
+    </para>
+    
+    <para>
+      This library is distributed in the hope that it will be useful,
+      but WITHOUT ANY WARRANTY; without even the implied warranty of
+      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+      Lesser General Public License for more details.
+    </para>
+    
+    <para>
+      You should have received a copy of the GNU Lesser General Public
+      License along with this library. If not, see &lt;http://www.gnu.org/licenses/&gt;.
+    </para>
+  </refsect1>
+  
+  <refsect1>
+    <title>AUTHOR</title>
+
+    <para>man page: &dhusername; &dhemail</para>
+    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;
+  </refsect1>
+
+  <refsect1>
+    <title>BUGS</title>
+
+    <para>Before reporting a bug, please confirm that the bug you found is
+    still present in the latest official release. If the problem persists,
+    then send mail with instructions describing how to reproduce the bug to
+    &lt;etherbone-core@ohwr.org&gt;.</para>
+
+  </refsect1>
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:2
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:nil
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
