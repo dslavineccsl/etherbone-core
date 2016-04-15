@@ -3,10 +3,12 @@ ACLOCAL_AMFLAGS = -I auto
 
 include_HEADERS = etherbone.h
 lib_LTLIBRARIES = libetherbone.la
-bin_PROGRAMS    = tools/eb-read tools/eb-write tools/eb-put tools/eb-get tools/eb-snoop tools/eb-ls tools/eb-find tools/eb-tunnel tools/eb-discover
 EXTRA_PROGRAMS  = test/sizes test/loopback test/etherbonetest
 pkg_DATA	= etherbone.pc
 EXTRA_DIST	= etherbone.pc.in glue/version.c.in
+bin_PROGRAMS    = tools/eb-read      tools/eb-write      tools/eb-put      tools/eb-get      tools/eb-snoop      tools/eb-ls      tools/eb-find      tools/eb-tunnel      tools/eb-discover
+dist_man_MANS   = tools/eb-read.1    tools/eb-write.1    tools/eb-put.1    tools/eb-get.1    tools/eb-snoop.1    tools/eb-ls.1    tools/eb-find.1    tools/eb-tunnel.1    tools/eb-discover.1
+EXTRA_DIST      = tools/eb-read.sgml tools/eb-write.sgml tools/eb-put.sgml tools/eb-get.sgml tools/eb-snoop.sgml tools/eb-ls.sgml tools/eb-find.sgml tools/eb-tunnel.sgml tools/eb-discover.sgml
 
 SOURCES =				\
 	memory/dynamic.c		\
@@ -99,3 +101,15 @@ tools_eb_discover_LDADD  =
 test_sizes_SOURCES	= test/sizes.c
 test_loopback_SOURCES	= test/loopback.cpp
 test_etherbonetest_SOURCES = test/etherbonetest.cpp
+
+# Use manpages in distribution tarball if docbook2man not found
+if REBUILD_MAN_PAGES
+.sgml.1:
+	$(DOCBOOK2MAN) -o $(@D) $<
+else
+if GIT_TREE
+.sgml.1:
+	@echo "***** You must have docbook-utils installed to build from git *****"
+	@exit 1
+endif
+endif

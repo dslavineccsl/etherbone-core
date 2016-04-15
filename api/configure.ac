@@ -42,7 +42,9 @@ AC_DEFINE_UNQUOTED([OPERATING_SYSTEM], ["$ac_cv_OPERATING_SYSTEM"], [The operati
 AC_DEFINE_UNQUOTED([HOSTNAME], ["${HOSTNAME:-unknown}"], [The hostname of the build system])
 AC_DEFINE_UNQUOTED([USERNAME], ["${USERNAME:-${LOGNAME:-${USER:-unknown}}}"], [The username of the person compiling saftlib])
 
+AC_PATH_PROGS([DOCBOOK2MAN], [docbook2manz])
 AC_PATH_PROGS([GIT], [git])
+AM_CONDITIONAL([REBUILD_MAN_PAGES], [test x$DOCBOOK2MAN != x])
 AM_CONDITIONAL([GIT_TREE], [test x$GIT != x -a -e ../.git])
 
 AC_SUBST([ETHERBONE_MAJOR], MAJOR)
