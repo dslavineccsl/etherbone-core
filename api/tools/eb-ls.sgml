@@ -17,15 +17,15 @@ manpage.1: manpage.sgml
   -->
 
   <!-- Fill in your name for FIRSTNAME and SURNAME. -->
-  <!ENTITY dhfirstname "<firstname>Wesely</firstname>">
-  <!ENTITY dhsurname   "<surname>Terpstra</surname>">
+  <!ENTITY dhfirstname "<firstname>Dietrich</firstname>">
+  <!ENTITY dhsurname   "<surname>Beck</surname>">
   <!-- Please adjust the date whenever revising the manpage. -->
   <!ENTITY dhdate      "<date>April 13, 2016</date>">
   <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
        allowed: see man(7), man(1). -->
   <!ENTITY dhsection   "<manvolnum>1</manvolnum>">
-  <!ENTITY dhemail     "<email>w.terpstra@gsi.de</email>">
-  <!ENTITY dhusername  "Wesley W. Terpstra">
+  <!ENTITY dhemail     "<email>d.beck@gsi.de</email>">
+  <!ENTITY dhusername  "Dietrich Beck">
   <!ENTITY dhucpackage "<refentrytitle>eb-ls</refentrytitle>">
   <!ENTITY dhpackage   "eb-ls">
 
@@ -73,10 +73,11 @@ manpage.1: manpage.sgml
 
     <para> <command>&dhpackage;</command> is a tool which lists all devices attached to a remote Wishbone bus. </para>
 
-    <para> The  mandatory parameter  &lt;proto/host/port&gt; specifies
-    the  Wishbone bus.  Examples  are "dev/wbm0"  for  a Wishbone  bus
-    connected on  the local host,  or "udp/192.168.65.1" for  a remote
-    one.</para>
+    <para>
+      The  mandatory parameter &lt;proto/host/port&gt; specifies
+      the Wishbone bus. Examples are "dev/wbm0" for a Wishbone bus
+      connected on the local host, or "udp/192.168.65.1" for a remote one.
+    </para>
 
   </refsect1>
   <refsect1>
@@ -98,7 +99,11 @@ manpage.1: manpage.sgml
       <varlistentry>
         <term><option>-r &lt;retries&gt;</option></term>
         <listitem>
-          <para>Sets number of times to attempt autonegotiation (3).</para>
+	  <para>
+	    Sets number of times to attempt autonegotiation (3). This is important when using
+	    a protocol such as UDP. Certain parameters for communication must be negotiated.
+	    The number of retries can be controlled by this parameter.
+	  </para>
         </listitem>
       </varlistentry>
       <varlistentry>
@@ -127,9 +132,19 @@ manpage.1: manpage.sgml
       </varlistentry>
     </variablelist>
   </refsect1>
+
+  <refsect1>
+    <title>EXAMPLE</title>
+
+    <para>
+      "eb-ls dev/wbm0" lists all devices attached to the Wishbone bus. Here, Etherbone uses the
+      PCIe to connect to the remote Wishbone bus.
+    </para>
+  </refsect1>
+
   <refsect1>
     <title>SEE ALSO</title>
-    <para>eb-write (1), eb-read (1), eb-put (1), eb-get (1), eb-find (1), eb-discover (1), eb-tunnel (1).</para>
+    <para>eb-write (1), eb-read (1),  eb-put (1), eb-get (1), eb-find (1), eb-discover (1), eb-tunnel (1), eb-snoop.</para>
   </refsect1>
  <refsect1>
     <title>COPYRIGHT</title>
@@ -161,8 +176,8 @@ manpage.1: manpage.sgml
   <refsect1>
     <title>AUTHOR</title>
 
-    <para>&dhusername; &dhemail</para>
-
+    <para>man page: &dhusername; &dhemail</para>
+    <para>code: Wesley W. Terpstra &lt;w.terpstra@gsi.de&gt;
   </refsect1>
 
   <refsect1>
