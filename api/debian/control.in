@@ -1,7 +1,7 @@
 Source: etherbone
 Priority: optional
 Maintainer: Wesley W. Terpstra <terpstra@debian.org>
-Build-Depends: debhelper (>= 9), autotools-dev, lsb-release
+Build-Depends: debhelper (>= 9), dh-autoreconf, lsb-release
 Standards-Version: 3.9.6
 Section: libs
 Homepage: http://www.ohwr.org/projects/etherbone-core
