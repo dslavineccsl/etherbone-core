@@ -42,6 +42,7 @@ Description: serial protocol for the Wishbone bus - library
  Library files for running an application dependent on this library.
 
 Package: etherbone-tools
+Section: admin
 Architecture: any
 Depends: libetherbone@ETHERBONE_SONAME@ (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: serial protocol for the Wishbone bus - command-line tools
