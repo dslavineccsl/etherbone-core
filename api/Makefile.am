@@ -106,10 +106,4 @@ test_etherbonetest_SOURCES = test/etherbonetest.cpp
 if REBUILD_MAN_PAGES
 .sgml.1:
 	$(DOCBOOK2MAN) -o $(@D) $<
-else
-if GIT_TREE
-.sgml.1:
-	@echo "***** You must have docbook-utils installed to build from git *****"
-	@exit 1
-endif
 endif
