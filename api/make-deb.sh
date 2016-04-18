@@ -8,16 +8,16 @@ set -ex
 make -j $JOBS distcheck
 make debian
 
-tarball=$(echo etherbone-*.tar.gz)
+tarball=$(echo etherbone-*.tar.xz)
 ver=${tarball##*-}
-ver=${ver%%.tar.gz}
-orig=etherbone_$ver.orig.tar.gz
+ver=${ver%%.tar.xz}
+orig=etherbone_$ver.orig.tar.xz
 
 rm -rf build
 mkdir build
 mv $tarball build/$orig
 cd build
-tar xvzf $orig
+tar xvJf $orig
 cp -a ../debian etherbone-${ver}/
 cd etherbone-${ver}
 debuild -eDEB_BUILD_OPTIONS="parallel=$JOBS" 

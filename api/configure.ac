@@ -12,7 +12,7 @@ AC_CONFIG_MACRO_DIR([auto])
 AC_CONFIG_AUX_DIR([auto])
 AC_CONFIG_HEADERS([config.h])
 
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects dist-xz no-dist-gzip])
 AM_MAINTAINER_MODE
 
 AC_PROG_LIBTOOL
