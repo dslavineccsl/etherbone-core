@@ -46,6 +46,7 @@ EB_PRIVATE void eb_dev_send_buffer(struct eb_transport* transportp, struct eb_li
 
 struct eb_dev_transport {
   /* Contents must fit in 9 bytes */
+  char reserved[9];
 };
 
 struct eb_dev_link {

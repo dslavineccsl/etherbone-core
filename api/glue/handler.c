@@ -137,7 +137,7 @@ eb_status_t eb_socket_attach(eb_socket_t socketp, const struct eb_handler* handl
       break;
     } else {
       scan_last = address->device->sdb_component.addr_last+1;
-      scan_last = (scan_last+7) & ~(eb_address_t)7; // align upwards to 8-bytes
+      scan_last = (scan_last+7) & ~(eb_address_t)7; /* align upwards to 8-bytes */
     }
   }
   

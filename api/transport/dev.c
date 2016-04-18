@@ -94,7 +94,7 @@ eb_status_t eb_dev_connect(struct eb_transport* transportp, struct eb_link* link
   link->fdes = fdes;
   link->flags = fcntl(fdes, F_GETFL, 0);
 
-  // If this is a serial device, enter raw mode
+  /* If this is a serial device, enter raw mode */
   if (tcgetattr(fdes, &ios) == 0) {
     cfmakeraw(&ios);
     cfsetispeed(&ios, B115200);

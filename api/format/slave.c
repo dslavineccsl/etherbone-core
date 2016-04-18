@@ -154,6 +154,7 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
     /* Is this a probe response? */
     if ((buffer[2] & EB_HEADER_PR) != 0) { /* probe response */
       eb_device_t devp;
+      eb_address_t tag;
       struct eb_device* dev;
       
       if (len != 8) goto kill; /* > 8: haven't sent requests, passive should not send data */
@@ -161,7 +162,6 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
       if (passive) goto kill; /* passive link not responded! */
       
       /* Find device by probe id */
-      eb_address_t tag;
       tag = be32toh(*(uint32_t*)&buffer[4]);
       
       for (devp = socket->first_device; devp != EB_NULL; devp = dev->next) {

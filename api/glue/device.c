@@ -121,8 +121,10 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
     /* Try to determine port width */
     device->widths = 0;
     do {
-      uint8_t buf[8] = { 0x4E, 0x6F, 0x11, proposed_widths, 0x0, 0x0, 0x0, 0x0 };
+      uint8_t buf[8] = { 0x4E, 0x6F, 0x11, 0, 0x0, 0x0, 0x0, 0x0 };
       int timeout, got;
+      
+      buf[3] = proposed_widths;
       
       link = EB_LINK(device->link);
       transport = EB_TRANSPORT(device->transport);

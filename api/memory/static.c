@@ -56,4 +56,8 @@ int eb_expand_array(void) {
   }
 }
 
+#else
+
+typedef int make_iso_compilers_happy; /* so the file is not empty */
+
 #endif

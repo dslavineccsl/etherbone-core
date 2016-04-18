@@ -176,20 +176,31 @@ eb_data_t eb_socket_read_config(eb_socket_t socketp, eb_width_t widths, eb_addre
   struct eb_socket* socket;
   struct eb_socket_aux* aux;
   eb_address_t sdb;
+  eb_data_t out;
+  int len;
+  uint8_t buf[16];
   
   socket = EB_SOCKET(socketp);
   aux = EB_SOCKET_AUX(socket->aux);
   sdb = aux->sdb_offset;
   
   /* We only support reading from the error shift register and SDB so far */
-  eb_data_t out;
-  int len;
-  uint8_t buf[16] = {
-    error >> 56, error >> 48, error >> 40, error >> 32,
-    error >> 24, error >> 16, error >>  8, error >>  0,
-    sdb   >> 56, sdb   >> 48, sdb   >> 40, sdb   >> 32,
-    sdb   >> 24, sdb   >> 16, sdb   >>  8, sdb   >>  0,
-  };
+  buf[0x0] = error >> 56;
+  buf[0x1] = error >> 48;
+  buf[0x2] = error >> 40;
+  buf[0x3] = error >> 32;
+  buf[0x4] = error >> 24;
+  buf[0x5] = error >> 16;
+  buf[0x6] = error >>  8;
+  buf[0x7] = error >>  0;
+  buf[0x8] = sdb   >> 56;
+  buf[0x9] = sdb   >> 48;
+  buf[0xa] = sdb   >> 40;
+  buf[0xb] = sdb   >> 32;
+  buf[0xc] = sdb   >> 24;
+  buf[0xd] = sdb   >> 16;
+  buf[0xe] = sdb   >>  8;
+  buf[0xf] = sdb   >>  0;
   
   len = (widths & EB_DATAX);
   

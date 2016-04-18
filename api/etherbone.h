@@ -156,7 +156,7 @@ enum sdb_record_type {
   sdb_record_device       = 0x01,
   sdb_record_bridge       = 0x02,
   sdb_record_integration  = 0x80,
-  sdb_record_empty        = 0xFF,
+  sdb_record_empty        = 0xFF
 };
 
 /* The type of bus (specifies bus-specific fields) */
@@ -764,7 +764,7 @@ class Cycle {
   public:
     Cycle();
     
-    // Start a cycle on the target device.
+    /* Start a cycle on the target device. */
     template <typename T>
     EB_STATUS_OR_VOID_T open(Device device, T* user, eb_callback_t);
     EB_STATUS_OR_VOID_T open(Device device);

@@ -59,4 +59,8 @@ void eb_free_link            (eb_link_t             x) { free(x); }
 void eb_free_sdb_scan        (eb_sdb_scan_t         x) { free(x); }
 void eb_free_sdb_record      (eb_sdb_record_t       x) { free(x); }
 
+#else
+
+typedef int make_iso_compilers_happy; /* so the file is not empty */
+
 #endif

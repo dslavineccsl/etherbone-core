@@ -236,7 +236,7 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
 }
 
 /* We allocate buffer on the stack to hack around missing alloca */
-#define EB_SDB_DECODE(x)                                                                          \
+#define EB_SDB_DECODE(x)                                                                           \
 static void eb_sdb_decode##x(struct eb_sdb_scan* scan, eb_device_t device, eb_operation_t ops) {   \
   union {                                                                                          \
     struct {                                                                                       \
@@ -245,7 +245,7 @@ static void eb_sdb_decode##x(struct eb_sdb_scan* scan, eb_device_t device, eb_op
     } s;                                                                                           \
     uint8_t bytes[1];                                                                              \
   } sdb;                                                                                           \
-  return eb_sdb_decode(scan, device, &sdb.bytes[0], sizeof(sdb), ops);                             \
+  eb_sdb_decode(scan, device, &sdb.bytes[0], sizeof(sdb), ops);                                    \
 }
 
 EB_SDB_DECODE(4)

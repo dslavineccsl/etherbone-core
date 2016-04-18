@@ -315,10 +315,11 @@ int main(int argc, char** argv) {
                     eb_width_address(line_width), eb_width_data(line_width));
   
   if (probe) {
+    struct sdb_device info;
+    
     if (verbose)
       fprintf(stdout, "Scanning remote bus for Wishbone devices...\n");
     
-    struct sdb_device info;
     if ((status = eb_sdb_find_by_address(device, address, &info)) != EB_OK) {
       fprintf(stderr, "%s: failed to find SDB record: %s\n", program, eb_status(status));
       return 1;
