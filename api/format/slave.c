@@ -162,7 +162,7 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
       if (passive) goto kill; /* passive link not responded! */
       
       /* Find device by probe id */
-      tag = be32toh(*(uint32_t*)&buffer[4]);
+      tag = EB_LOAD(&buffer[4], EB_DATA32);
       
       for (devp = socket->first_device; devp != EB_NULL; devp = dev->next) {
         dev = EB_DEVICE(devp);

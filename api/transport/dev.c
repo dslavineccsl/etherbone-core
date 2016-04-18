@@ -182,7 +182,8 @@ void eb_dev_send(struct eb_transport* transportp, struct eb_link* linkp, const u
   /* Set blocking */
   eb_dev_set_blocking(link, 1);
 
-  write(link->fdes, buf, len);
+  /* Wrap this in an if(); to silence warning about ignored result */
+  if (write(link->fdes, buf, len));
 }
 
 void eb_dev_send_buffer(struct eb_transport* transportp, struct eb_link* linkp, int on) {
