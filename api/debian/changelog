@@ -1,3 +1,10 @@
+etherbone (1.2.2-1) unstable; urgency=medium
+
+  * New manpages.
+  * Support multi-arch.
+
+ -- Wesley W. Terpstra <terpstra@debian.org>  Mon, 18 Apr 2016 15:54:21 +0200
+
 etherbone (1.2.1-1) unstable; urgency=low
 
   * Fixed libtool versioning
