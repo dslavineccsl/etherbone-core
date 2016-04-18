@@ -11,6 +11,7 @@ Vcs-Browser: http://www.ohwr.org/projects/etherbone-core/repository/revisions/ma
 Package: libetherbone-dev
 Section: libdevel
 Architecture: any
+Multi-Arch: same
 Depends: libetherbone@ETHERBONE_SONAME@ (= ${binary:Version}), ${misc:Depends}
 Description: serial protocol for the Wishbone bus - development files
  The Wishbone bus is an open bus standard used in system-on-chip projects.
@@ -26,6 +27,7 @@ Description: serial protocol for the Wishbone bus - development files
 
 Package: libetherbone@ETHERBONE_SONAME@
 Architecture: any
+Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: serial protocol for the Wishbone bus - library
  The Wishbone bus is an open bus standard used in system-on-chip projects.
