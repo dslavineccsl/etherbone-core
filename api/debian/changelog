@@ -1,3 +1,9 @@
+etherbone (1.2.3-1) unstable; urgency=medium
+
+  * Fixup some warnings on wheezy.
+
+ -- Wesley W. Terpstra <terpstra@debian.org>  Wed, 20 Apr 2016 11:33:59 +0200
+
 etherbone (1.2.2-1) unstable; urgency=medium
 
   * New manpages.
