@@ -20,6 +20,7 @@ AC_PROG_INSTALL
 
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_CC_C99
 
 AC_MSG_CHECKING(whether compiler understands -Wall)
 old_CFLAGS="$CFLAGS"
