@@ -28,6 +28,7 @@ Description: serial protocol for the Wishbone bus - development files
 Package: libetherbone@ETHERBONE_SONAME@
 Architecture: any
 Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: serial protocol for the Wishbone bus - library
  The Wishbone bus is an open bus standard used in system-on-chip projects.
