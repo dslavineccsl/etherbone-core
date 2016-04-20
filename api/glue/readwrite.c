@@ -185,22 +185,22 @@ eb_data_t eb_socket_read_config(eb_socket_t socketp, eb_width_t widths, eb_addre
   sdb = aux->sdb_offset;
   
   /* We only support reading from the error shift register and SDB so far */
-  buf[0x0] = error >> 56;
-  buf[0x1] = error >> 48;
-  buf[0x2] = error >> 40;
-  buf[0x3] = error >> 32;
-  buf[0x4] = error >> 24;
-  buf[0x5] = error >> 16;
-  buf[0x6] = error >>  8;
-  buf[0x7] = error >>  0;
-  buf[0x8] = sdb   >> 56;
-  buf[0x9] = sdb   >> 48;
-  buf[0xa] = sdb   >> 40;
-  buf[0xb] = sdb   >> 32;
-  buf[0xc] = sdb   >> 24;
-  buf[0xd] = sdb   >> 16;
-  buf[0xe] = sdb   >>  8;
-  buf[0xf] = sdb   >>  0;
+  buf[0x7] = error; error >>= 8;
+  buf[0x6] = error; error >>= 8;
+  buf[0x5] = error; error >>= 8;
+  buf[0x4] = error; error >>= 8;
+  buf[0x3] = error; error >>= 8;
+  buf[0x2] = error; error >>= 8;
+  buf[0x1] = error; error >>= 8;
+  buf[0x0] = error; error >>= 8;
+  buf[0xf] = sdb;   sdb   >>= 8;
+  buf[0xe] = sdb;   sdb   >>= 8;
+  buf[0xd] = sdb;   sdb   >>= 8;
+  buf[0xc] = sdb;   sdb   >>= 8;
+  buf[0xb] = sdb;   sdb   >>= 8;
+  buf[0xa] = sdb;   sdb   >>= 8;
+  buf[0x9] = sdb;   sdb   >>= 8;
+  buf[0x8] = sdb;   sdb   >>= 8;
   
   len = (widths & EB_DATAX);
   
