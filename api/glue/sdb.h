@@ -30,6 +30,12 @@
 
 #include "../etherbone.h"
 
+typedef EB_POINTER(eb_sdb_scan_meta) eb_sdb_scan_meta_t;
+struct eb_sdb_scan_meta {
+  eb_address_t msi_base;
+  eb_address_t bus_base;
+};
+
 typedef EB_POINTER(eb_sdb_scan) eb_sdb_scan_t;
 struct eb_sdb_scan {
   eb_user_data_t user_data;

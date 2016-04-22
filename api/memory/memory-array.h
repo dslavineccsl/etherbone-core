@@ -47,6 +47,7 @@ union eb_memory_item {
   struct eb_transport transport;
   struct eb_link link;
   struct eb_sdb_scan sdb_scan;
+  struct eb_sdb_scan_meta sdb_scan_meta;
   struct eb_sdb_record sdb_record;
   struct eb_free_item free_item;
 };
@@ -74,6 +75,7 @@ EB_PRIVATE int eb_expand_array(void);
 #define EB_TRANSPORT(x) (&eb_memory_array[x].transport)
 #define EB_LINK(x) (&eb_memory_array[x].link)
 #define EB_SDB_SCAN(x) (&eb_memory_array[x].sdb_scan)
+#define EB_SDB_SCAN_META(x) (&eb_memory_array[x].sdb_scan_meta)
 #define EB_SDB_RECORD(x) (&eb_memory_array[x].sdb_record)
 
 #endif

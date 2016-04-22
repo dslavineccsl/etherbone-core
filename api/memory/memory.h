@@ -52,6 +52,7 @@ EB_PRIVATE eb_socket_aux_t eb_new_socket_aux(void);
 EB_PRIVATE eb_transport_t eb_new_transport(void);
 EB_PRIVATE eb_link_t eb_new_link(void);
 EB_PRIVATE eb_sdb_scan_t eb_new_sdb_scan(void);
+EB_PRIVATE eb_sdb_scan_meta_t eb_new_sdb_scan_meta(void);
 EB_PRIVATE eb_sdb_record_t eb_new_sdb_record(void);
 
 EB_PRIVATE void eb_free_operation(eb_operation_t x);
@@ -65,6 +66,7 @@ EB_PRIVATE void eb_free_socket_aux(eb_socket_aux_t x);
 EB_PRIVATE void eb_free_transport(eb_transport_t x);
 EB_PRIVATE void eb_free_link(eb_link_t x);
 EB_PRIVATE void eb_free_sdb_scan(eb_sdb_scan_t x);
+EB_PRIVATE void eb_free_sdb_scan_meta(eb_sdb_scan_t x);
 EB_PRIVATE void eb_free_sdb_record(eb_sdb_record_t x);
 
 #endif

@@ -41,6 +41,7 @@
 #define EB_TRANSPORT(x) (x)
 #define EB_LINK(x) (x)
 #define EB_SDB_SCAN(x) (x)
+#define EB_SDB_SCAN_META(x) (x)
 #define EB_SDB_RECORD(x) (x)
 
 #endif
