@@ -130,11 +130,10 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
   
   devices = sdb->interconnect.sdb_records - 1;
   for (br.i = 0; br.i < devices; ++br.i) {
-    int bad, wide;
+    int wide;
     const union sdb_record* des;
     
     des = &sdb->record[br.i];
-    bad = 0;
     
     if (verbose) {
       fprintf(stdout, "Device ");
@@ -151,7 +150,6 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         fprintf(stdout, "  wbd_width:                %"PRIx8"\n",   des->device.bus_specific & SDB_WISHBONE_WIDTH);
         
         verbose_component(&des->device.sdb_component, &br);
-        bad = 0;
         break;
       
       case sdb_record_bridge:
@@ -165,14 +163,19 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         }
         
         verbose_component(&des->bridge.sdb_component, &br);
-        bad = des->bridge.sdb_component.addr_first < br.parent->addr_first ||
-              des->bridge.sdb_component.addr_last  > br.parent->addr_last   ||
-              des->bridge.sdb_component.addr_first > des->bridge.sdb_component.addr_last ||
-              des->bridge.sdb_child                < des->bridge.sdb_component.addr_first ||
-              des->bridge.sdb_child                > des->bridge.sdb_component.addr_last-64;
         
         break;
         
+      case sdb_record_msi:
+        fprintf(stdout, "\n");
+        
+        fprintf(stdout, "  msi_flags:                %08"PRIx32"%s\n", des->msi.msi_flags, (des->msi.msi_flags>>31)?" Active":"");
+        fprintf(stdout, "  wbd_endian:               %s\n",      (des->msi.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) ? "little" : "big");
+        fprintf(stdout, "  wbd_width:                %"PRIx8"\n", des->msi.bus_specific & SDB_WISHBONE_WIDTH);
+        
+        verbose_component(&des->bridge.sdb_component, &br);
+        break;
+      
       case sdb_record_integration: /* !!! fixme */
       case sdb_record_empty:
       default:
@@ -203,6 +206,16 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         fwrite(des->device.sdb_component.product.name, 1, sizeof(des->device.sdb_component.product.name), stdout);
         fprintf(stdout, "\n");
         break;
+      
+      case sdb_record_msi:
+        fprintf(stdout, "%016"PRIx64":%08"PRIx32"  %16"EB_ADDR_FMT"%c ",
+                des->msi.sdb_component.product.vendor_id, 
+                des->msi.sdb_component.product.device_id, 
+                (eb_address_t)des->msi.sdb_component.addr_first,
+                (des->msi.msi_flags>>31)?'M':'m');
+        fwrite(des->msi.sdb_component.product.name, 1, sizeof(des->msi.sdb_component.product.name), stdout);
+        fprintf(stdout, "\n");
+        break;
         
       case sdb_record_integration: /* !!! fixme */
       case sdb_record_empty:
@@ -212,13 +225,21 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
       }
     }
     
-    if (!norecurse && !bad && des->empty.record_type == sdb_record_bridge) {
-      br.stop = 0;
-      br.addr_first = des->bridge.sdb_component.addr_first;
-      br.addr_last  = des->bridge.sdb_component.addr_last;
-      
-      eb_sdb_scan_bus(dev, &des->bridge, &br, &list_devices);
-      while (!br.stop) eb_socket_run(eb_device_socket(dev), -1);
+    if (!norecurse && des->empty.record_type == sdb_record_bridge) {
+      if (des->bridge.sdb_component.addr_first < br.parent->addr_first ||
+          des->bridge.sdb_component.addr_last  > br.parent->addr_last   ||
+          des->bridge.sdb_component.addr_first > des->bridge.sdb_component.addr_last ||
+          des->bridge.sdb_child                < des->bridge.sdb_component.addr_first ||
+          des->bridge.sdb_child                > des->bridge.sdb_component.addr_last-64) {
+        fprintf(stderr, "error: not scanning subtree; SDB linkage is corrupt\n");
+      } else {
+        br.stop = 0;
+        br.addr_first = des->bridge.sdb_component.addr_first;
+        br.addr_last  = des->bridge.sdb_component.addr_last;
+        
+        eb_sdb_scan_bus(dev, &des->bridge, &br, &list_devices);
+        while (!br.stop) eb_socket_run(eb_device_socket(dev), -1);
+      }
     }
   }
 }
