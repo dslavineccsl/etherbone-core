@@ -179,6 +179,7 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   eb_user_data_t data;
   sdb_callback_t cb;
   eb_address_t bus_base;
+  eb_address_t msi_base;
   struct sdb_table* sdb;
   struct eb_sdb_scan* scan;
   struct eb_sdb_scan_meta* meta;
@@ -190,6 +191,7 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   cb = scan->cb;
   data = scan->user_data;
   bus_base = meta->bus_base;
+  msi_base = meta->msi_base;
   
   if (eb_sdb_fill_block(buf, size, ops) != 0) {
     (*cb)(data, device, 0, EB_FAIL);
@@ -222,6 +224,12 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
     case sdb_record_bridge:
       r->bridge.sdb_child = be64toh(r->bridge.sdb_child) + bus_base;
       eb_sdb_component_decode(&r->bridge.sdb_component, bus_base);
+      break;
+    
+    case sdb_record_msi:
+      r->msi.msi_flags    = be32toh(r->msi.msi_flags);
+      r->msi.bus_specific = be32toh(r->msi.bus_specific);
+      eb_sdb_component_decode(&r->msi.sdb_component, msi_base);
       break;
     
     case sdb_record_integration:
@@ -608,6 +616,8 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
       record->status = EB_OK;
       return;
     }
+    
+    /* sdb_record_msi is not matched, because it is another address space */
   }
   
   /* nothing matched! */
@@ -667,7 +677,8 @@ static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const s
     }
     
     if ((des->empty.record_type == sdb_record_device || 
-        des->empty.record_type == sdb_record_bridge) && 
+         des->empty.record_type == sdb_record_bridge ||
+         des->empty.record_type == sdb_record_msi) && 
         des->device.sdb_component.product.vendor_id == record->vendor_id &&
         des->device.sdb_component.product.device_id == record->device_id) {
       if (record->fill < record->size) 
