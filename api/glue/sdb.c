@@ -233,8 +233,9 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
     case sdb_record_msi:
       r->msi.msi_flags    = be32toh(r->msi.msi_flags);
       r->msi.bus_specific = be32toh(r->msi.bus_specific);
-      eb_sdb_component_decode(&r->msi.sdb_component, msi_base);
-      /* If this is the active crossbar, include the MSI target */
+      /* For MSI, do NOT rebase the nested records as the relationship is inverted */
+      eb_sdb_component_decode(&r->msi.sdb_component, 0);
+      /* However, DO compute the MSI recursively */
       if ((r->msi.msi_flags >> 31) != 0) 
         msi_base += r->msi.sdb_component.addr_first;
       break;
