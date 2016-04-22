@@ -624,9 +624,9 @@ EB_PUBLIC eb_status_t eb_device_write(eb_device_t    device,
  * The sdb object passed to your callback is only valid until you return.
  * If you need persistent information, you must copy the memory yourself.
  */
-typedef void (*sdb_callback2_t)(eb_user_data_t, eb_device_t device, const struct sdb_table*, eb_address_t msi_base, eb_status_t);
-EB_PUBLIC eb_status_t eb_sdb_scan_bus2(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, eb_user_data_t data, sdb_callback2_t cb);
-EB_PUBLIC eb_status_t eb_sdb_scan_root2(eb_device_t device, eb_user_data_t data, sdb_callback2_t cb);
+typedef void (*sdb_callback_msi_t)(eb_user_data_t, eb_device_t device, const struct sdb_table*, eb_address_t msi_first, eb_address_t msi_last, eb_status_t);
+EB_PUBLIC eb_status_t eb_sdb_scan_bus_msi(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, eb_user_data_t data, sdb_callback_msi_t cb);
+EB_PUBLIC eb_status_t eb_sdb_scan_root_msi(eb_device_t device, eb_user_data_t data, sdb_callback_msi_t cb);
 
 typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, const struct sdb_table*, eb_status_t);
 EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb);
@@ -641,7 +641,7 @@ EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, 
  * On success, EB_OK is returned.
  * Other failures are possible.
  */
-EB_PUBLIC eb_status_t eb_sdb_find_by_address2(eb_device_t device, eb_address_t address, struct sdb_device* output, eb_address_t* msi_base);
+EB_PUBLIC eb_status_t eb_sdb_find_by_address_msi(eb_device_t device, eb_address_t address, struct sdb_device* output, eb_address_t* msi_first, eb_address_t* msi_last);
 EB_PUBLIC eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, struct sdb_device* output);
 
 /* When scanning by identity, multiple devices may match.
@@ -650,7 +650,7 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t ad
  * If there are more records than fit in output, they are counted but unwritten.
  * On success, EB_OK is returned. Do not forget to check *devices as well!
  */
-EB_PUBLIC eb_status_t eb_sdb_find_by_identity2(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi, int* devices);
+EB_PUBLIC eb_status_t eb_sdb_find_by_identity_msi(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi_first, eb_address_t* output_msi_last, int* devices);
 EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
 
@@ -658,7 +658,7 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendo
  * eb_sdb_find_by_identity now supports finding crossbars, use it to find special CBs and use them as
  * root node for eb_sdb_find_by_identity_at. 
  */
-EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at2(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi, int* devices);
+EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at_msi(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi_first, eb_address_t* output_msi_last, int* devices);
 EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, const struct sdb_bridge* bridge, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
 #ifdef __cplusplus
@@ -752,11 +752,11 @@ class Device {
     template <typename T>
     EB_STATUS_OR_VOID_T sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t);
     template <typename T>
-    EB_STATUS_OR_VOID_T sdb_scan_bus2(const struct sdb_bridge* bridge, eb_address_t msi_base, T* user, sdb_callback2_t);
+    EB_STATUS_OR_VOID_T sdb_scan_bus_msi(const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, T* user, sdb_callback_msi_t);
     template <typename T>
     EB_STATUS_OR_VOID_T sdb_scan_root(T* user, sdb_callback_t);
     template <typename T>
-    EB_STATUS_OR_VOID_T sdb_scan_root2(T* user, sdb_callback2_t);
+    EB_STATUS_OR_VOID_T sdb_scan_root_msi(T* user, sdb_callback_msi_t);
     
     EB_STATUS_OR_VOID_T sdb_find_by_address(eb_address_t address, struct sdb_device* output);
     EB_STATUS_OR_VOID_T sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output);
@@ -953,8 +953,8 @@ inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus(const struct sdb_bridge* bridge,
 }
 
 template <typename T>
-inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus2(const struct sdb_bridge* bridge, eb_address_t msi_base, T* user, sdb_callback2_t cb) {
-  EB_RETURN_OR_THROW("Device::sdb_scan_bus2", eb_sdb_scan_bus2(device, bridge, msi_base, user, cb));
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus_msi(const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, T* user, sdb_callback_msi_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_bus_msi", eb_sdb_scan_bus_msi(device, bridge, msi_first, msi_last, user, cb));
 }
 
 template <typename T>
@@ -963,8 +963,8 @@ inline EB_STATUS_OR_VOID_T Device::sdb_scan_root(T* user, sdb_callback_t cb) {
 }
 
 template <typename T>
-inline EB_STATUS_OR_VOID_T Device::sdb_scan_root2(T* user, sdb_callback2_t cb) {
-  EB_RETURN_OR_THROW("Device::sdb_scan_root2", eb_sdb_scan_root2(device, user, cb));
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_root_msi(T* user, sdb_callback_msi_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_root_msi", eb_sdb_scan_root_msi(device, user, cb));
 }
 
 inline EB_STATUS_OR_VOID_T Device::sdb_find_by_address(eb_address_t address, struct sdb_device* output) {

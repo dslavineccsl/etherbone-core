@@ -103,7 +103,7 @@ static void verbose_component(const struct sdb_component* component, struct bus_
 }
 
 static int norecurse;
-static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_base, eb_status_t status) {
+static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_first, eb_address_t msi_last, eb_status_t status) {
   struct bus_record br;
   int devices;
   
@@ -120,7 +120,8 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
     fprintf(stdout, "  sdb_magic:                %08"PRIx32"\n", sdb->interconnect.sdb_magic);
     fprintf(stdout, "  sdb_records:              %d\n",   sdb->interconnect.sdb_records);
     fprintf(stdout, "  sdb_version:              %d\n",   sdb->interconnect.sdb_version);
-    fprintf(stdout, "  bus_master_msi.addr_first:%016"PRIx64"\n", msi_base);
+    fprintf(stdout, "  bus_master_msi.addr_first:%016"PRIx64"\n", msi_first);
+    fprintf(stdout, "  bus_master_msi.addr_last: %016"PRIx64"\n", msi_last);
     verbose_component(&sdb->interconnect.sdb_component, &br);
     
     if (sdb->interconnect.sdb_component.addr_first > br.parent->addr_first)
@@ -238,7 +239,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         br.addr_first = des->bridge.sdb_component.addr_first;
         br.addr_last  = des->bridge.sdb_component.addr_last;
         
-        eb_sdb_scan_bus2(dev, &des->bridge, msi_base, &br, &list_devices);
+        eb_sdb_scan_bus_msi(dev, &des->bridge, msi_first, msi_last, &br, &list_devices);
         while (!br.stop) eb_socket_run(eb_device_socket(dev), -1);
       }
     }
@@ -344,7 +345,7 @@ int main(int argc, char** argv) {
   /* Find the limit of the bus space based on the address width */
   br.addr_last >>= (sizeof(eb_address_t) - (eb_device_width(device) >> 4))*8;
   
-  if ((status = eb_sdb_scan_root2(device, &br, &list_devices)) != EB_OK) {
+  if ((status = eb_sdb_scan_root_msi(device, &br, &list_devices)) != EB_OK) {
     fprintf(stderr, "%s: failed to scan remote device: %s\n", program, eb_status(status));
     return 1;
   }

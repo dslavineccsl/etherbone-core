@@ -177,10 +177,12 @@ static void eb_sdb_component_decode(struct sdb_component* component, eb_address_
 
 static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf, uint16_t size, eb_operation_t ops) {
   eb_user_data_t data;
-  sdb_callback_t cb1;
-  sdb_callback2_t cb2;
+  sdb_callback_t cb;
+  sdb_callback_msi_t cb_msi;
+  uint16_t cb_fmt;
   eb_address_t bus_base;
-  eb_address_t msi_base;
+  eb_address_t msi_first;
+  eb_address_t msi_last;
   struct sdb_table* sdb;
   struct eb_sdb_scan* scan;
   struct eb_sdb_scan_meta* meta;
@@ -189,15 +191,17 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   scan = EB_SDB_SCAN(scanp);
   meta = EB_SDB_SCAN_META(scan->meta);
   
-  cb1 = scan->cb1;
-  cb2 = scan->cb2;
-  data = meta->user_data;
+  cb = scan->un_cb.cb;
+  cb_msi = scan->un_cb.cb_msi;
+  cb_fmt = scan->cb_fmt;
+  data = scan->user_data;
   bus_base = meta->bus_base;
-  msi_base = meta->msi_base;
+  msi_first = meta->msi_first;
+  msi_last = meta->msi_last;
   
   if (eb_sdb_fill_block(buf, size, ops) != 0) {
-    if (cb1) (*cb1)(data, device, 0, EB_FAIL);
-    if (cb2) (*cb2)(data, device, 0, 0, EB_FAIL);
+    if (cb_fmt == 1) (*cb)(data, device, 0, EB_FAIL);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_FAIL);
     return;
   }
   
@@ -209,8 +213,8 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   eb_sdb_component_decode(&sdb->interconnect.sdb_component, bus_base);
 
   if (sizeof(struct sdb_device) * sdb->interconnect.sdb_records > size) {
-    if (cb1) (*cb1)(data, device, 0, EB_FAIL);
-    if (cb2) (*cb2)(data, device, 0, 0, EB_FAIL);
+    if (cb_fmt == 1) (*cb)(data, device, 0, EB_FAIL);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_FAIL);
     return;
   }
   
@@ -236,8 +240,15 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
       /* For MSI, do NOT rebase the nested records as the relationship is inverted */
       eb_sdb_component_decode(&r->msi.sdb_component, 0);
       /* However, DO compute the MSI recursively */
-      if ((r->msi.msi_flags >> 31) != 0) 
-        msi_base += r->msi.sdb_component.addr_first;
+      if ((r->msi.msi_flags >> 31) != 0) {
+        msi_first += r->msi.sdb_component.addr_first;
+        /* The first time we find a matching master, that sets last for the rest */
+        if (msi_last == 0) {
+          msi_last = r->msi.sdb_component.addr_last;
+        } else {
+          msi_last += r->msi.sdb_component.addr_first;
+        }
+      }
       break;
     
     case sdb_record_integration:
@@ -253,8 +264,8 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
     }
   }
   
-  if (cb1) (*cb1)(data, device, sdb, EB_OK);
-  if (cb2) (*cb2)(data, device, sdb, msi_base, EB_OK);
+  if (cb_fmt == 1) (*cb)(data, device, sdb, EB_OK);
+  if (cb_fmt == 2) (*cb_msi)(data, device, sdb, msi_first, msi_last, EB_OK);
 }
 
 /* We allocate buffer on the stack to hack around missing alloca */
@@ -281,7 +292,6 @@ EB_SDB_DECODE(256)
 static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
   struct eb_sdb_record* record;
   struct eb_sdb_scan* scan;
-  struct eb_sdb_scan_meta* meta;
   struct eb_operation* op;
   struct eb_operation* op2;
   struct eb_operation* opi;
@@ -291,8 +301,9 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
   eb_operation_t op2p;
   eb_operation_t opip;
   eb_user_data_t data;
-  sdb_callback_t cb1;
-  sdb_callback2_t cb2;
+  sdb_callback_t cb;
+  sdb_callback_msi_t cb_msi;
+  uint16_t cb_fmt;
   uint16_t devices;
   
   recordp = (eb_sdb_record_t)(uintptr_t)mydata;
@@ -332,15 +343,14 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
     scanp = record->scan;
     scan = EB_SDB_SCAN(scanp);
     metap = scan->meta;
-    cb1 = scan->cb1;
-    cb2 = scan->cb2;
-    
-    meta = EB_SDB_SCAN_META(metap);
-    data = meta->user_data;
+    cb = scan->un_cb.cb;
+    cb_msi = scan->un_cb.cb_msi;
+    cb_fmt = scan->cb_fmt;
+    data = scan->user_data;
     
     if (record->status != EB_OK) {
-      if (cb1) (*cb1)(data, device, 0, record->status);
-      if (cb2) (*cb2)(data, device, 0, 0, record->status);
+      if (cb_fmt == 1) (*cb)(data, device, 0, record->status);
+      if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, record->status);
     } else {
       devices = record->records - 1;
       
@@ -352,8 +362,8 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
       else if (devices < 128) eb_sdb_decode128(scanp, device, record->ops);
       else if (devices < 256) eb_sdb_decode256(scanp, device, record->ops);
       else {
-        if (cb1) (*cb1)(data, device, 0, EB_OOM);
-        if (cb2) (*cb2)(data, device, 0, 0, EB_OOM);
+        if (cb_fmt == 1) (*cb)(data, device, 0, EB_OOM);
+        if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_OOM);
       }
     }
     
@@ -376,14 +386,14 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
     uint8_t bytes[1];
   } header;
   struct eb_sdb_scan* scan;
-  struct eb_sdb_scan_meta* meta;
   struct eb_sdb_record* record;
   eb_sdb_scan_t scanp;
   eb_sdb_scan_meta_t metap;
   eb_sdb_record_t recordp;
   eb_user_data_t data;
-  sdb_callback_t cb1;
-  sdb_callback2_t cb2;
+  sdb_callback_t cb;
+  sdb_callback_msi_t cb_msi;
+  uint16_t cb_fmt;
   eb_address_t address, end;
   eb_cycle_t cycle;
   int stride;
@@ -391,20 +401,20 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   
   scanp = (eb_sdb_scan_t)(uintptr_t)mydata;
   scan = EB_SDB_SCAN(scanp);
-  cb1 = scan->cb1;
-  cb2 = scan->cb2;
+  cb = scan->un_cb.cb;
+  cb_msi = scan->un_cb.cb_msi;
+  cb_fmt = scan->cb_fmt;
+  data = scan->user_data;
   
   metap = scan->meta;
-  meta = EB_SDB_SCAN_META(metap);
-  data = meta->user_data;
   
   stride = (eb_device_width(device) & EB_DATAX);
   
   if (status != EB_OK) {
     eb_free_sdb_scan(scanp);
     eb_free_sdb_scan_meta(metap);
-    if (cb1) (*cb1)(data, device, 0, status);
-    if (cb2) (*cb2)(data, device, 0, 0, status);
+    if (cb_fmt == 1) (*cb)(data, device, 0, status);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, status);
     return;
   }
   
@@ -412,8 +422,8 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   if (eb_sdb_fill_block(&header.bytes[0], sizeof(header), ops) != 0) {
     eb_free_sdb_scan(scanp);
     eb_free_sdb_scan_meta(metap);
-    if (cb1) (*cb1)(data, device, 0, EB_FAIL);
-    if (cb2) (*cb2)(data, device, 0, 0, EB_FAIL);
+    if (cb_fmt == 1) (*cb)(data, device, 0, EB_FAIL);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_FAIL);
     return;
   }
   
@@ -421,8 +431,8 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   if (be32toh(header.interconnect.sdb_magic) != SDB_MAGIC) {
     eb_free_sdb_scan(scanp);
     eb_free_sdb_scan_meta(metap);
-    if (cb1) (*cb1)(data, device, 0, EB_FAIL);
-    if (cb2) (*cb2)(data, device, 0, 0, EB_FAIL);
+    if (cb_fmt == 1) (*cb)(data, device, 0, EB_FAIL);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_FAIL);
     return;
   }
   
@@ -430,8 +440,8 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   if ((recordp = eb_new_sdb_record()) == EB_NULL) {
     eb_free_sdb_scan(scanp);
     eb_free_sdb_scan_meta(metap);
-    if (cb1) (*cb1)(data, device, 0, EB_OOM);
-    if (cb2) (*cb2)(data, device, 0, 0, EB_OOM);
+    if (cb_fmt == 1) (*cb)(data, device, 0, EB_OOM);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_OOM);
     return;
   }
   
@@ -461,7 +471,7 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   }
 }
 
-static eb_status_t eb_sdb_scan_bus_real(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, eb_user_data_t data, sdb_callback_t cb1, sdb_callback2_t cb2) {
+static eb_status_t eb_sdb_scan_bus_real(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, eb_user_data_t data, sdb_callback_t cb, sdb_callback_msi_t cb_msi) {
   struct eb_sdb_scan* scan;
   struct eb_sdb_scan_meta* meta;
   eb_cycle_t cycle;
@@ -483,14 +493,20 @@ static eb_status_t eb_sdb_scan_bus_real(eb_device_t device, const struct sdb_bri
   }
   
   scan = EB_SDB_SCAN(scanp);
-  scan->cb1 = cb1;
-  scan->cb2 = cb2;
+  if (cb) {
+    scan->un_cb.cb = cb;
+    scan->cb_fmt = 1;
+  } else {
+    scan->un_cb.cb_msi = cb_msi;
+    scan->cb_fmt = 2;
+  }
+  scan->user_data = data;
   scan->meta = metap;
   
   meta = EB_SDB_SCAN_META(metap);
   meta->bus_base = bridge->sdb_component.addr_first;
-  meta->msi_base = msi_base;
-  meta->user_data = data;
+  meta->msi_first = msi_first;
+  meta->msi_last = msi_last;
   
   stride = (eb_device_width(device) & EB_DATAX);
   
@@ -511,42 +527,42 @@ static eb_status_t eb_sdb_scan_bus_real(eb_device_t device, const struct sdb_bri
 }
 
 eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb) {
-  return eb_sdb_scan_bus_real(device, bridge, 0, data, cb, 0);
+  return eb_sdb_scan_bus_real(device, bridge, 0, 0, data, cb, 0);
 }
 
-eb_status_t eb_sdb_scan_bus2(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, eb_user_data_t data, sdb_callback2_t cb) {
-  return eb_sdb_scan_bus_real(device, bridge, msi_base, data, 0, cb);
+eb_status_t eb_sdb_scan_bus_msi(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, eb_user_data_t data, sdb_callback_msi_t cb) {
+  return eb_sdb_scan_bus_real(device, bridge, msi_first, msi_last, data, 0, cb);
 }
 
 static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
   struct eb_sdb_scan* scan;
-  struct eb_sdb_scan_meta* meta;
   eb_sdb_scan_t scanp;
   eb_sdb_scan_meta_t metap;
   eb_user_data_t data;
   eb_address_t header_address;
   eb_address_t header_end;
-  sdb_callback_t cb1;
-  sdb_callback2_t cb2;
+  sdb_callback_t cb;
+  sdb_callback_msi_t cb_msi;
+  uint16_t cb_fmt;
   eb_cycle_t cycle;
   int stride;
   
   scanp = (eb_sdb_scan_t)(uintptr_t)mydata;
   scan = EB_SDB_SCAN(scanp);
-  cb1 = scan->cb1;
-  cb2 = scan->cb2;
+  cb = scan->un_cb.cb;
+  cb_msi = scan->un_cb.cb_msi;
+  cb_fmt = scan->cb_fmt;
+  data = scan->user_data;
   
   metap = scan->meta;
-  meta = EB_SDB_SCAN_META(metap);
-  data = meta->user_data;
   
   stride = (eb_device_width(device) & EB_DATAX);
   
   if (status != EB_OK) {
     eb_free_sdb_scan(scanp);
     eb_free_sdb_scan_meta(metap);
-    if (cb1) (*cb1)(data, device, 0, status);
-    if (cb2) (*cb2)(data, device, 0, 0, status);
+    if (cb_fmt == 1) (*cb)(data, device, 0, status);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, status);
     return;
   }
   
@@ -556,8 +572,8 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
     if (eb_operation_had_error(ops)) {
       eb_free_sdb_scan(scanp);
       eb_free_sdb_scan_meta(metap);
-      if (cb1) (*cb1)(data, device, 0, EB_FAIL);
-      if (cb2) (*cb2)(data, device, 0, 0, EB_FAIL);
+      if (cb_fmt == 1) (*cb)(data, device, 0, EB_FAIL);
+      if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_FAIL);
       return;
     }
     header_address <<= (stride*8);
@@ -568,8 +584,8 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
   if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdb_got_header, &cycle)) != EB_OK) {
     eb_free_sdb_scan(scanp);
     eb_free_sdb_scan_meta(metap);
-    if (cb1) (*cb1)(data, device, 0, status);
-    if (cb2) (*cb2)(data, device, 0, 0, status);
+    if (cb_fmt == 1) (*cb)(data, device, 0, status);
+    if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, status);
     return;
   }
   
@@ -579,7 +595,7 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
   eb_cycle_close(cycle);
 }
 
-static eb_status_t eb_sdb_scan_root_real(eb_device_t device, eb_user_data_t data, sdb_callback_t cb1, sdb_callback2_t cb2) {
+static eb_status_t eb_sdb_scan_root_real(eb_device_t device, eb_user_data_t data, sdb_callback_t cb, sdb_callback_msi_t cb_msi) {
   struct eb_sdb_scan* scan;
   struct eb_sdb_scan_meta* meta;
   eb_cycle_t cycle;
@@ -596,14 +612,20 @@ static eb_status_t eb_sdb_scan_root_real(eb_device_t device, eb_user_data_t data
   }
   
   scan = EB_SDB_SCAN(scanp);
-  scan->cb1 = cb1;
-  scan->cb2 = cb2;
+  if (cb) {
+    scan->un_cb.cb = cb;
+    scan->cb_fmt = 1;
+  } else {
+    scan->un_cb.cb_msi = cb_msi;
+    scan->cb_fmt = 2;
+  }
+  scan->user_data = data;
   scan->meta = metap;
   
   meta = EB_SDB_SCAN_META(metap);
-  meta->bus_base = 0;
-  meta->msi_base = 0;
-  meta->user_data = data;
+  meta->bus_base  = 0;
+  meta->msi_first = 0;
+  meta->msi_last  = 0;
   
   stride = (eb_device_width(device) & EB_DATAX);
   
@@ -626,18 +648,19 @@ eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callba
   return eb_sdb_scan_root_real(device, data, cb, 0);
 }
 
-eb_status_t eb_sdb_scan_root2(eb_device_t device, eb_user_data_t data, sdb_callback2_t cb) {
+eb_status_t eb_sdb_scan_root_msi(eb_device_t device, eb_user_data_t data, sdb_callback_msi_t cb) {
   return eb_sdb_scan_root_real(device, data, 0, cb);
 }
 
 struct eb_find_by_address {
   eb_address_t address;
   struct sdb_device* output;
-  eb_address_t* msi_base;
+  eb_address_t* msi_first;
+  eb_address_t* msi_last;
   eb_status_t status;
 };
 
-static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_base, eb_status_t status) {
+static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_first, eb_address_t msi_last, eb_status_t status) {
   int i, devices;
   const union sdb_record* des;
   struct eb_find_by_address* record;
@@ -656,7 +679,7 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
     
     if (des->empty.record_type == sdb_record_bridge && 
         des->bridge.sdb_component.addr_first <= record->address && record->address <= des->bridge.sdb_component.addr_last) {
-      if ((status = eb_sdb_scan_bus2(dev, &des->bridge, msi_base, data, &eb_cb_find_by_address)) != EB_OK) {
+      if ((status = eb_sdb_scan_bus_msi(dev, &des->bridge, msi_first, msi_last, data, &eb_cb_find_by_address)) != EB_OK) {
         record->status = status;
       }
       return;
@@ -665,7 +688,8 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
     if (des->empty.record_type == sdb_record_device && 
         des->device.sdb_component.addr_first <= record->address && record->address <= des->device.sdb_component.addr_last) {
       memcpy(record->output, des, sizeof(struct sdb_device));
-      *record->msi_base = msi_base;
+      *record->msi_first = msi_first;
+      *record->msi_last  = msi_last;
       record->status = EB_OK;
       return;
     }
@@ -677,14 +701,15 @@ static void eb_cb_find_by_address(eb_user_data_t data, eb_device_t dev, const st
   record->status = EB_ADDRESS;
 }
 
-eb_status_t eb_sdb_find_by_address2(eb_device_t device, eb_address_t address, struct sdb_device* output, eb_address_t* msi_base) {
+eb_status_t eb_sdb_find_by_address_msi(eb_device_t device, eb_address_t address, struct sdb_device* output, eb_address_t* msi_first, eb_address_t* msi_last) {
   struct eb_find_by_address record;
   
-  record.address = address;
-  record.output  = output;
-  record.msi_base= msi_base;
+  record.address   = address;
+  record.output    = output;
+  record.msi_first = msi_first;
+  record.msi_last  = msi_last;
   
-  if ((record.status = eb_sdb_scan_root2(device, &record, eb_cb_find_by_address)) == EB_OK) {
+  if ((record.status = eb_sdb_scan_root_msi(device, &record, eb_cb_find_by_address)) == EB_OK) {
     record.status = 1;
     while (record.status > 0) {
       eb_socket_run(eb_device_socket(device), -1);
@@ -696,13 +721,14 @@ eb_status_t eb_sdb_find_by_address2(eb_device_t device, eb_address_t address, st
 
 eb_status_t eb_sdb_find_by_address(eb_device_t device, eb_address_t address, struct sdb_device* output) {
   eb_address_t null;
-  return eb_sdb_find_by_address2(device, address, output, &null);
+  return eb_sdb_find_by_address_msi(device, address, output, &null, &null);
 }
 
 struct eb_find_by_identity {
   uint64_t vendor_id;
   struct sdb_device* output;
-  eb_address_t* output_msi;
+  eb_address_t* output_first;
+  eb_address_t* output_last;
   uint32_t device_id;
   int size_output;
   int size_msi;
@@ -712,7 +738,7 @@ struct eb_find_by_identity {
   eb_status_t status;
 };
 
-static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_base, eb_status_t status) {
+static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_first, eb_address_t msi_last, eb_status_t status) {
   int i, devices;
   const union sdb_record* des;
   struct eb_find_by_identity* record;
@@ -731,7 +757,7 @@ static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const s
     des = &sdb->record[i];
     
     if (des->empty.record_type == sdb_record_bridge) {
-      if ((status = eb_sdb_scan_bus2(dev, &des->bridge, msi_base, data, &eb_cb_find_by_identity)) == EB_OK) {
+      if ((status = eb_sdb_scan_bus_msi(dev, &des->bridge, msi_first, msi_last, data, &eb_cb_find_by_identity)) == EB_OK) {
         ++record->pending;
       } else {
         record->status = status;
@@ -746,8 +772,11 @@ static void eb_cb_find_by_identity(eb_user_data_t data, eb_device_t dev, const s
       if (record->fill_output < record->size_output) 
         memcpy(record->output+record->fill_output, des, sizeof(struct sdb_device));
       ++record->fill_output;
-      if (record->fill_msi < record->size_msi)
-        record->output_msi[record->fill_msi] = msi_base;
+      if (record->fill_msi < record->size_msi) {
+        record->output_first[record->fill_msi] = msi_first;
+        record->output_last [record->fill_msi] = msi_last;
+      }
+      ++record->fill_msi;
     }
   }
 }
@@ -757,9 +786,11 @@ static eb_status_t eb_sdb_find_by_identity_real(
   uint64_t vendor_id,
   uint32_t device_id,
   const struct sdb_bridge* bridge,
-  eb_address_t msi_base,
+  eb_address_t msi_first,
+  eb_address_t msi_last,
   struct sdb_device* output,
-  eb_address_t* output_msi,
+  eb_address_t* output_msi_first,
+  eb_address_t* output_msi_last,
   int* devices,
   int msis) 
 {
@@ -773,14 +804,15 @@ static eb_status_t eb_sdb_find_by_identity_real(
   record.fill_msi    = 0;
   record.pending = 1;
   record.output = output;
-  record.output_msi = output_msi;
+  record.output_first = output_msi_first;
+  record.output_last  = output_msi_last;
   
   if (bridge) {
-    if ((record.status = eb_sdb_scan_root2(device, &record, eb_cb_find_by_identity)) == EB_OK)
+    if ((record.status = eb_sdb_scan_root_msi(device, &record, eb_cb_find_by_identity)) == EB_OK)
       while (record.pending > 0) 
         eb_socket_run(eb_device_socket(device), -1);
   } else {
-    if ((record.status = eb_sdb_scan_bus2(device, bridge, msi_base, &record, eb_cb_find_by_identity)) == EB_OK)
+    if ((record.status = eb_sdb_scan_bus_msi(device, bridge, msi_first, msi_last, &record, eb_cb_find_by_identity)) == EB_OK)
       while (record.pending > 0) 
         eb_socket_run(eb_device_socket(device), -1);
   
@@ -790,18 +822,18 @@ static eb_status_t eb_sdb_find_by_identity_real(
   return record.status;
 }
 
-eb_status_t eb_sdb_find_by_identity2(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi, int* devices) {
-  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, 0, 0, output, output_msi, devices, *devices);
+eb_status_t eb_sdb_find_by_identity_msi(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi_first, eb_address_t* output_msi_last, int* devices) {
+  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, 0, 0, 0, output, output_msi_first, output_msi_last, devices, *devices);
 }
 
 eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices) {
-  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, 0, 0, output, 0, devices, 0);
+  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, 0, 0, 0, output, 0, 0, devices, 0);
 }
 
-eb_status_t eb_sdb_find_by_identity_at2(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi, int* devices) {
-  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, bridge, msi_base, output, output_msi, devices, *devices);
+eb_status_t eb_sdb_find_by_identity_at_msi(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_first, eb_address_t msi_last, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi_first, eb_address_t* output_msi_last, int* devices) {
+  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, bridge, msi_first, msi_last, output, output_msi_first, output_msi_last, devices, *devices);
 }
 
 eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, const struct sdb_bridge* bridge, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices) {
-  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, bridge, 0, output, 0, devices, 0);
+  return eb_sdb_find_by_identity_real(device, vendor_id, device_id, bridge, 0, 0, output, 0, 0, devices, 0);
 }
