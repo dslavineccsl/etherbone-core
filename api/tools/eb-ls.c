@@ -84,14 +84,14 @@ static void verbose_product(const struct sdb_product* product) {
 
 static void verbose_component(const struct sdb_component* component, struct bus_record* br) {
   fprintf(stdout, "  sdb_component.addr_first: %016"PRIx64, component->addr_first);
-  if (component->addr_first < br->parent->addr_first || component->addr_first > br->parent->addr_last) {
+  if (br && (component->addr_first < br->parent->addr_first || component->addr_first > br->parent->addr_last)) {
     fprintf(stdout, " !!! out of range\n");
   } else {
     fprintf(stdout, "\n");
   }
   
   fprintf(stdout, "  sdb_component.addr_last:  %016"PRIx64, component->addr_last);
-  if (component->addr_last < br->parent->addr_first || component->addr_last > br->parent->addr_last) {
+  if (br && (component->addr_last < br->parent->addr_first || component->addr_last > br->parent->addr_last)) {
     fprintf(stdout, " !!! out of range\n");
   } else if (component->addr_last < component->addr_first) {
     fprintf(stdout, " !!! precedes addr_first\n");
@@ -103,7 +103,7 @@ static void verbose_component(const struct sdb_component* component, struct bus_
 }
 
 static int norecurse;
-static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_status_t status) {
+static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_table* sdb, eb_address_t msi_base, eb_status_t status) {
   struct bus_record br;
   int devices;
   
@@ -120,6 +120,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
     fprintf(stdout, "  sdb_magic:                %08"PRIx32"\n", sdb->interconnect.sdb_magic);
     fprintf(stdout, "  sdb_records:              %d\n",   sdb->interconnect.sdb_records);
     fprintf(stdout, "  sdb_version:              %d\n",   sdb->interconnect.sdb_version);
+    fprintf(stdout, "  bus_master_msi.addr_first:%016"PRIx64"\n", msi_base);
     verbose_component(&sdb->interconnect.sdb_component, &br);
     
     if (sdb->interconnect.sdb_component.addr_first > br.parent->addr_first)
@@ -173,7 +174,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         fprintf(stdout, "  wbd_endian:               %s\n",      (des->msi.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) ? "little" : "big");
         fprintf(stdout, "  wbd_width:                %"PRIx8"\n", des->msi.bus_specific & SDB_WISHBONE_WIDTH);
         
-        verbose_component(&des->bridge.sdb_component, &br);
+        verbose_component(&des->bridge.sdb_component, 0);
         break;
       
       case sdb_record_integration: /* !!! fixme */
@@ -237,7 +238,7 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
         br.addr_first = des->bridge.sdb_component.addr_first;
         br.addr_last  = des->bridge.sdb_component.addr_last;
         
-        eb_sdb_scan_bus(dev, &des->bridge, &br, &list_devices);
+        eb_sdb_scan_bus2(dev, &des->bridge, msi_base, &br, &list_devices);
         while (!br.stop) eb_socket_run(eb_device_socket(dev), -1);
       }
     }
@@ -343,7 +344,7 @@ int main(int argc, char** argv) {
   /* Find the limit of the bus space based on the address width */
   br.addr_last >>= (sizeof(eb_address_t) - (eb_device_width(device) >> 4))*8;
   
-  if ((status = eb_sdb_scan_root(device, &br, &list_devices)) != EB_OK) {
+  if ((status = eb_sdb_scan_root2(device, &br, &list_devices)) != EB_OK) {
     fprintf(stderr, "%s: failed to scan remote device: %s\n", program, eb_status(status));
     return 1;
   }
