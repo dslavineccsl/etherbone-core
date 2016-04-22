@@ -175,16 +175,21 @@ static void eb_sdb_component_decode(struct sdb_component* component, eb_address_
   eb_sdb_product_decode(&component->product);
 }
 
-static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t* buf, uint16_t size, eb_operation_t ops) {
+static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf, uint16_t size, eb_operation_t ops) {
   eb_user_data_t data;
   sdb_callback_t cb;
   eb_address_t bus_base;
   struct sdb_table* sdb;
+  struct eb_sdb_scan* scan;
+  struct eb_sdb_scan_meta* meta;
   uint16_t i;
+  
+  scan = EB_SDB_SCAN(scanp);
+  meta = EB_SDB_SCAN_META(scan->meta);
   
   cb = scan->cb;
   data = scan->user_data;
-  bus_base = scan->bus_base;
+  bus_base = meta->bus_base;
   
   if (eb_sdb_fill_block(buf, size, ops) != 0) {
     (*cb)(data, device, 0, EB_FAIL);
@@ -237,7 +242,7 @@ static void eb_sdb_decode(struct eb_sdb_scan* scan, eb_device_t device, uint8_t*
 
 /* We allocate buffer on the stack to hack around missing alloca */
 #define EB_SDB_DECODE(x)                                                                           \
-static void eb_sdb_decode##x(struct eb_sdb_scan* scan, eb_device_t device, eb_operation_t ops) {   \
+static void eb_sdb_decode##x(eb_sdb_scan_t scan, eb_device_t device, eb_operation_t ops) {   \
   union {                                                                                          \
     struct {                                                                                       \
       struct sdb_interconnect interconnect;                                                        \
@@ -264,6 +269,7 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
   struct eb_operation* opi;
   eb_sdb_record_t recordp;
   eb_sdb_scan_t scanp;
+  eb_sdb_scan_meta_t metap;
   eb_operation_t op2p;
   eb_operation_t opip;
   eb_user_data_t data;
@@ -306,6 +312,7 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
   if (--record->pending == 0) {
     scanp = record->scan;
     scan = EB_SDB_SCAN(scanp);
+    metap = scan->meta;
     cb = scan->cb;
     data = scan->user_data;
     
@@ -314,13 +321,13 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
     } else {
       devices = record->records - 1;
       
-      if      (devices <   4) eb_sdb_decode4(scan, device, record->ops);
-      else if (devices <   8) eb_sdb_decode8(scan, device, record->ops);
-      else if (devices <  16) eb_sdb_decode16(scan, device, record->ops);
-      else if (devices <  32) eb_sdb_decode32(scan, device, record->ops);
-      else if (devices <  64) eb_sdb_decode64(scan, device, record->ops);
-      else if (devices < 128) eb_sdb_decode128(scan, device, record->ops);
-      else if (devices < 256) eb_sdb_decode256(scan, device, record->ops);
+      if      (devices <   4) eb_sdb_decode4(scanp, device, record->ops);
+      else if (devices <   8) eb_sdb_decode8(scanp, device, record->ops);
+      else if (devices <  16) eb_sdb_decode16(scanp, device, record->ops);
+      else if (devices <  32) eb_sdb_decode32(scanp, device, record->ops);
+      else if (devices <  64) eb_sdb_decode64(scanp, device, record->ops);
+      else if (devices < 128) eb_sdb_decode128(scanp, device, record->ops);
+      else if (devices < 256) eb_sdb_decode256(scanp, device, record->ops);
       else (*cb)(data, device, 0, EB_OOM);
     }
     
@@ -333,6 +340,7 @@ static void eb_sdb_got_record(eb_user_data_t mydata, eb_device_t device, eb_oper
     
     eb_free_sdb_record(recordp);
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
   }
 }
 
@@ -344,6 +352,7 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   struct eb_sdb_scan* scan;
   struct eb_sdb_record* record;
   eb_sdb_scan_t scanp;
+  eb_sdb_scan_meta_t metap;
   eb_sdb_record_t recordp;
   eb_user_data_t data;
   sdb_callback_t cb;
@@ -357,10 +366,13 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   cb = scan->cb;
   data = scan->user_data;
   
+  metap = scan->meta;
+  
   stride = (eb_device_width(device) & EB_DATAX);
   
   if (status != EB_OK) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     (*cb)(data, device, 0, status);
     return;
   }
@@ -368,6 +380,7 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   /* Read in the header */
   if (eb_sdb_fill_block(&header.bytes[0], sizeof(header), ops) != 0) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     (*cb)(data, device, 0, EB_FAIL);
     return;
   }
@@ -375,6 +388,7 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   /* Is the magic there? */
   if (be32toh(header.interconnect.sdb_magic) != SDB_MAGIC) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     (*cb)(data, device, 0, EB_FAIL);
     return;
   }
@@ -382,6 +396,7 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
   /* Allocate a new record */
   if ((recordp = eb_new_sdb_record()) == EB_NULL) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     (*cb)(data, device, 0, EB_OOM);
     return;
   }
@@ -414,8 +429,10 @@ static void eb_sdb_got_header(eb_user_data_t mydata, eb_device_t device, eb_oper
 
 eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb) {
   struct eb_sdb_scan* scan;
+  struct eb_sdb_scan_meta* meta;
   eb_cycle_t cycle;
   eb_sdb_scan_t scanp;
+  eb_sdb_scan_meta_t metap;
   int stride;
   eb_status_t status;
   eb_address_t header_address;
@@ -426,17 +443,26 @@ eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge,
   
   if ((scanp = eb_new_sdb_scan()) == EB_NULL)
     return EB_OOM;
+  if ((metap = eb_new_sdb_scan_meta()) == EB_NULL) {
+    eb_free_sdb_scan(scanp);
+    return EB_OOM;
+  }
   
   scan = EB_SDB_SCAN(scanp);
   scan->cb = cb;
   scan->user_data = data;
-  scan->bus_base = bridge->sdb_component.addr_first;
+  scan->meta = metap;
+  
+  meta = EB_SDB_SCAN_META(metap);
+  meta->bus_base = bridge->sdb_component.addr_first;
+  meta->msi_base = 0; // !!!
   
   stride = (eb_device_width(device) & EB_DATAX);
   
   /* scan invalidated by all the EB calls below (which allocate) */
   if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdb_got_header, &cycle)) != EB_OK) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     return status;
   }
   
@@ -452,6 +478,7 @@ eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge,
 static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_operation_t ops, eb_status_t status) {
   struct eb_sdb_scan* scan;
   eb_sdb_scan_t scanp;
+  eb_sdb_scan_meta_t metap;
   eb_user_data_t data;
   eb_address_t header_address;
   eb_address_t header_end;
@@ -464,10 +491,13 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
   cb = scan->cb;
   data = scan->user_data;
   
+  metap = scan->meta;
+  
   stride = (eb_device_width(device) & EB_DATAX);
   
   if (status != EB_OK) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     (*cb)(data, device, 0, status);
     return;
   }
@@ -477,6 +507,7 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
   for (; ops != EB_NULL; ops = eb_operation_next(ops)) {
     if (eb_operation_had_error(ops)) {
       eb_free_sdb_scan(scanp);
+      eb_free_sdb_scan_meta(metap);
       (*cb)(data, device, 0, EB_FAIL);
       return;
     }
@@ -487,6 +518,7 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
   /* Now, we need to read the header */
   if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdb_got_header, &cycle)) != EB_OK) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     (*cb)(data, device, 0, status);
     return;
   }
@@ -499,24 +531,35 @@ static void eb_sdb_got_header_ptr(eb_user_data_t mydata, eb_device_t device, eb_
 
 eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb) {
   struct eb_sdb_scan* scan;
+  struct eb_sdb_scan_meta* meta;
   eb_cycle_t cycle;
   eb_sdb_scan_t scanp;
+  eb_sdb_scan_meta_t metap;
   eb_status_t status;
   int addr, stride;
   
   if ((scanp = eb_new_sdb_scan()) == EB_NULL)
     return EB_OOM;
+  if ((metap = eb_new_sdb_scan_meta()) == EB_NULL) {
+    eb_free_sdb_scan(scanp);
+    return EB_OOM;
+  }
   
   scan = EB_SDB_SCAN(scanp);
   scan->cb = cb;
   scan->user_data = data;
-  scan->bus_base = 0;
+  scan->meta = metap;
+  
+  meta = EB_SDB_SCAN_META(metap);
+  meta->bus_base = 0;
+  meta->msi_base = 0;
   
   stride = (eb_device_width(device) & EB_DATAX);
   
   /* scan invalidated by all the EB calls below (which allocate) */
   if ((status = eb_cycle_open(device, (eb_user_data_t)(uintptr_t)scanp, &eb_sdb_got_header_ptr, &cycle)) != EB_OK) {
     eb_free_sdb_scan(scanp);
+    eb_free_sdb_scan_meta(metap);
     return status;
   }
   

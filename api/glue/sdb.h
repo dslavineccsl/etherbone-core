@@ -40,7 +40,7 @@ typedef EB_POINTER(eb_sdb_scan) eb_sdb_scan_t;
 struct eb_sdb_scan {
   eb_user_data_t user_data;
   sdb_callback_t cb;
-  eb_address_t bus_base;
+  eb_sdb_scan_meta_t meta;
 };
 
 typedef EB_POINTER(eb_sdb_record) eb_sdb_record_t;
