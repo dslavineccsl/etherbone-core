@@ -807,7 +807,7 @@ static eb_status_t eb_sdb_find_by_identity_real(
   record.output_first = output_msi_first;
   record.output_last  = output_msi_last;
   
-  if (bridge) {
+  if (!bridge) {
     if ((record.status = eb_sdb_scan_root_msi(device, &record, eb_cb_find_by_identity)) == EB_OK)
       while (record.pending > 0) 
         eb_socket_run(eb_device_socket(device), -1);
