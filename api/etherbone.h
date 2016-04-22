@@ -155,6 +155,7 @@ enum sdb_record_type {
   sdb_record_interconnect = 0x00,
   sdb_record_device       = 0x01,
   sdb_record_bridge       = 0x02,
+  sdb_record_msi          = 0x03,
   sdb_record_integration  = 0x80,
   sdb_record_empty        = 0xFF
 };
@@ -236,11 +237,23 @@ struct sdb_bridge {
   struct sdb_component sdb_component;
 };
 
+/* Record type: sdb_msi
+ * This component record describes a bus master available for MSI.
+ * msi_flags mark the record of the active the bus master
+ * bus-specific bits are defined by each bus (see below)
+ */
+struct sdb_msi {
+  uint32_t             msi_flags;
+  uint32_t             bus_specific;
+  struct sdb_component sdb_component;
+};
+
 /* All possible SDB record structure */
 union sdb_record {
   struct sdb_empty        empty;
   struct sdb_device       device;
   struct sdb_bridge       bridge;
+  struct sdb_msi          msi;
   struct sdb_integration  integration;
   struct sdb_interconnect interconnect;
 };
