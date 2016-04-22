@@ -34,12 +34,13 @@ typedef EB_POINTER(eb_sdb_scan_meta) eb_sdb_scan_meta_t;
 struct eb_sdb_scan_meta {
   eb_address_t msi_base;
   eb_address_t bus_base;
+  eb_user_data_t user_data;
 };
 
 typedef EB_POINTER(eb_sdb_scan) eb_sdb_scan_t;
 struct eb_sdb_scan {
-  eb_user_data_t user_data;
-  sdb_callback_t cb;
+  sdb_callback_t cb1;
+  sdb_callback2_t cb2;
   eb_sdb_scan_meta_t meta;
 };
 
