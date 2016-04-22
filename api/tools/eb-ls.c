@@ -120,8 +120,8 @@ static void list_devices(eb_user_data_t user, eb_device_t dev, const struct sdb_
     fprintf(stdout, "  sdb_magic:                %08"PRIx32"\n", sdb->interconnect.sdb_magic);
     fprintf(stdout, "  sdb_records:              %d\n",   sdb->interconnect.sdb_records);
     fprintf(stdout, "  sdb_version:              %d\n",   sdb->interconnect.sdb_version);
-    fprintf(stdout, "  bus_master_msi.addr_first:%016"PRIx64"\n", msi_first);
-    fprintf(stdout, "  bus_master_msi.addr_last: %016"PRIx64"\n", msi_last);
+    fprintf(stdout, "  bus_master_msi.addr_first:%016"EB_ADDR_FMT"\n", msi_first);
+    fprintf(stdout, "  bus_master_msi.addr_last: %016"EB_ADDR_FMT"\n", msi_last);
     verbose_component(&sdb->interconnect.sdb_component, &br);
     
     if (sdb->interconnect.sdb_component.addr_first > br.parent->addr_first)
