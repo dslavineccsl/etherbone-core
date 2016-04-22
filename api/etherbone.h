@@ -635,10 +635,9 @@ typedef void (*sdb_callback2_t)(eb_user_data_t, eb_device_t device, const struct
 EB_PUBLIC eb_status_t eb_sdb_scan_bus2(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, eb_user_data_t data, sdb_callback2_t cb);
 EB_PUBLIC eb_status_t eb_sdb_scan_root2(eb_device_t device, eb_user_data_t data, sdb_callback2_t cb);
 
-/* These functions are deprecated, use the v2 versions above */
 typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, const struct sdb_table*, eb_status_t);
 EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb) EB_DEPRECATED;
-EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb) EB_DEPRECATED;
+EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb);
 
 /* Convenience methods for locating / identifying devices.
  * These calls are blocking! If you need the power API, use the above methods.
@@ -758,9 +757,11 @@ class Device {
     width_t width() const;
     
     template <typename T>
-    EB_STATUS_OR_VOID_T sdb_scan_bus (const struct sdb_bridge* bridge, T* user, sdb_callback_t);
+    EB_STATUS_OR_VOID_T sdb_scan_bus2(const struct sdb_bridge* bridge, eb_address_t msi_base, T* user, sdb_callback2_t);
     template <typename T>
     EB_STATUS_OR_VOID_T sdb_scan_root(T* user, sdb_callback_t);
+    template <typename T>
+    EB_STATUS_OR_VOID_T sdb_scan_root2(T* user, sdb_callback2_t);
     
     EB_STATUS_OR_VOID_T sdb_find_by_address(eb_address_t address, struct sdb_device* output);
     EB_STATUS_OR_VOID_T sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output);
@@ -952,13 +953,18 @@ inline width_t Device::width() const {
 }
 
 template <typename T>
-inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t cb) {
-  EB_RETURN_OR_THROW("Device::sdb_scan_bus", eb_sdb_scan_bus(device, bridge, user, cb));
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus2(const struct sdb_bridge* bridge, eb_address_t msi_base, T* user, sdb_callback2_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_bus2", eb_sdb_scan_bus2(device, bridge, msi_base, user, cb));
 }
 
 template <typename T>
 inline EB_STATUS_OR_VOID_T Device::sdb_scan_root(T* user, sdb_callback_t cb) {
   EB_RETURN_OR_THROW("Device::sdb_scan_root", eb_sdb_scan_root(device, user, cb));
+}
+
+template <typename T>
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_root2(T* user, sdb_callback2_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_root2", eb_sdb_scan_root2(device, user, cb));
 }
 
 inline EB_STATUS_OR_VOID_T Device::sdb_find_by_address(eb_address_t address, struct sdb_device* output) {
