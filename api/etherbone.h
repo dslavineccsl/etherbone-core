@@ -49,13 +49,6 @@
 #define EB_PRIVATE __attribute__((visibility("hidden")))
 #endif
 
-/* Deprecated */
-#ifdef __GNUC__
-#define EB_DEPRECATED __attribute__ ((deprecated))
-#else
-#define EB_DEPRECATED
-#endif
-
 /* Pointer type -- depends on memory implementation */
 #ifdef EB_USE_MALLOC
 #define EB_POINTER(typ) struct typ*
@@ -636,7 +629,7 @@ EB_PUBLIC eb_status_t eb_sdb_scan_bus2(eb_device_t device, const struct sdb_brid
 EB_PUBLIC eb_status_t eb_sdb_scan_root2(eb_device_t device, eb_user_data_t data, sdb_callback2_t cb);
 
 typedef void (*sdb_callback_t)(eb_user_data_t, eb_device_t device, const struct sdb_table*, eb_status_t);
-EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb) EB_DEPRECATED;
+EB_PUBLIC eb_status_t eb_sdb_scan_bus(eb_device_t device, const struct sdb_bridge* bridge, eb_user_data_t data, sdb_callback_t cb);
 EB_PUBLIC eb_status_t eb_sdb_scan_root(eb_device_t device, eb_user_data_t data, sdb_callback_t cb);
 
 /* Convenience methods for locating / identifying devices.
@@ -666,7 +659,7 @@ EB_PUBLIC eb_status_t eb_sdb_find_by_identity(eb_device_t device, uint64_t vendo
  * root node for eb_sdb_find_by_identity_at. 
  */
 EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at2(eb_device_t device, const struct sdb_bridge* bridge, eb_address_t msi_base, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, eb_address_t* output_msi, int* devices);
-EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, const struct sdb_bridge* bridge, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices) EB_DEPRECATED;
+EB_PUBLIC eb_status_t eb_sdb_find_by_identity_at(eb_device_t device, const struct sdb_bridge* bridge, uint64_t vendor_id, uint32_t device_id, struct sdb_device* output, int* devices);
 
 #ifdef __cplusplus
 }
@@ -756,6 +749,8 @@ class Device {
     
     width_t width() const;
     
+    template <typename T>
+    EB_STATUS_OR_VOID_T sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t);
     template <typename T>
     EB_STATUS_OR_VOID_T sdb_scan_bus2(const struct sdb_bridge* bridge, eb_address_t msi_base, T* user, sdb_callback2_t);
     template <typename T>
@@ -950,6 +945,11 @@ inline Socket Device::socket() {
 
 inline width_t Device::width() const {
   return eb_device_width(device);
+}
+
+template <typename T>
+inline EB_STATUS_OR_VOID_T Device::sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t cb) {
+  EB_RETURN_OR_THROW("Device::sdb_scan_bus", eb_sdb_scan_bus(device, bridge, user, cb));
 }
 
 template <typename T>
