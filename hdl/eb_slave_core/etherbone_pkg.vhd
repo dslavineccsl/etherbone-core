@@ -39,6 +39,19 @@ package etherbone_pkg is
     date          => x"20140615",
     name          => "Etherbone_Master   ")));
   
+  constant c_ebs_msi : t_sdb_msi := (
+    wbd_endian    => c_sdb_endian_big,
+    wbd_width     => x"7", -- 8/16/32-bit port granularity
+    sdb_component => (
+    addr_first    => x"0000000000000000",
+    addr_last     => x"000000000000ffff",
+    product => (
+    vendor_id     => x"0000000000000651", -- GSI
+    device_id     => x"c0a97504",
+    version       => x"00000002",
+    date          => x"20160422",
+    name          => "Etherbone_Slave    ")));
+  
   function f_hi_adr_bits(ebm : t_sdb_device) return natural;
   
   

@@ -8,6 +8,19 @@ use work.wr_fabric_pkg.all;
 
 package ez_usb_pkg is
 
+   constant c_usb_msi : t_sdb_msi := (
+     wbd_endian    => c_sdb_endian_big,
+     wbd_width     => x"7", -- 8/16/32-bit port granularity
+     sdb_component => (
+     addr_first    => x"0000000000000000",
+     addr_last     => x"000000000000ffff",
+     product => (
+     vendor_id     => x"0000000000000651", -- GSI
+     device_id     => x"2ba55199",
+     version       => x"00000002",
+     date          => x"20160422",
+     name          => "USB=>WB bridge     ")));
+
    component ez_usb is
      generic(
        g_sdb_address  : t_wishbone_address;
