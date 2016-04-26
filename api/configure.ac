@@ -57,5 +57,10 @@ AC_SUBST([ETHERBONE_REVISION], REVISION)
 AC_SUBST([ETHERBONE_API], [$((SONAME+MINOR))]) dnl API incremented on every change
 AC_SUBST([ETHERBONE_SONAME], SONAME)
 
+AC_DEFINE_UNQUOTED([ETHERBONE_MAJOR],    MAJOR,    [The library major version])
+AC_DEFINE_UNQUOTED([ETHERBONE_MINOR],    MINOR,    [The library minor version])
+AC_DEFINE_UNQUOTED([ETHERBONE_REVISION], REVISION, [The library revision])
+AC_DEFINE_UNQUOTED([ETHERBONE_SONAME],   SONAME,   [The soname number of the built library])
+
 AC_CONFIG_FILES([Makefile etherbone.pc])
 AC_OUTPUT
