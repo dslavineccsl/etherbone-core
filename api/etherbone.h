@@ -30,7 +30,7 @@
 #define ETHERBONE_H
 
 #define EB_PROTOCOL_VERSION	1
-#define EB_ABI_VERSION		0x04	/* incremented on incompatible changes */
+#define EB_ABI_VERSION		0x05	/* incremented on incompatible changes */
 
 #include <stdint.h>   /* uint32_t ... */
 #include <inttypes.h> /* EB_DATA_FMT ... */
