@@ -53,8 +53,7 @@ SOURCES =				\
 	transport/transport.h		\
 	transport/transports.c		\
 	transport/tunnel.h		\
-	transport/tunnel.c		\
-	glue/cplusplus.cpp
+	transport/tunnel.c
 
 if GIT_TREE
 glue/version.c: glue/version.c.in Makefile $(SOURCES)

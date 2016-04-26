@@ -704,7 +704,7 @@ inline std::ostream& operator << (std::ostream& o, const exception_t& e) {
 
 class Handler {
   public:
-    EB_PUBLIC virtual ~Handler();
+    EB_PUBLIC virtual ~Handler() { }
 
     virtual status_t read (address_t address, width_t width, data_t* data) = 0;
     virtual status_t write(address_t address, width_t width, data_t  data) = 0;
@@ -737,6 +737,11 @@ class Socket {
   friend class Device;
 };
 
+struct sdb_msi_device : public sdb_device {
+  eb_address_t msi_first;
+  eb_address_t msi_last;
+};
+
 class Device {
   public:
     Device();
@@ -760,6 +765,7 @@ class Device {
     
     EB_STATUS_OR_VOID_T sdb_find_by_address(eb_address_t address, struct sdb_device* output);
     EB_STATUS_OR_VOID_T sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output);
+    EB_STATUS_OR_VOID_T sdb_find_by_identity_msi(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_msi_device>& output);
     
     template <typename T>
     EB_STATUS_OR_VOID_T read(eb_address_t address, eb_format_t format, eb_data_t* data, T* user, eb_callback_t cb);
@@ -862,10 +868,6 @@ void sdb_wrap_function_callback(eb_user_data_t user, eb_device_t dev, const stru
 /*                            C++ Implementation                            */
 /****************************************************************************/
 
-/* Proxy functions needed by C++ -- ignore these */
-EB_PUBLIC eb_status_t eb_proxy_read_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr);
-EB_PUBLIC eb_status_t eb_proxy_write_handler(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value);
-
 inline Socket::Socket(eb_socket_t sock)
  : socket(sock) { 
 }
@@ -888,12 +890,22 @@ inline EB_STATUS_OR_VOID_T Socket::passive(const char* address) {
   EB_RETURN_OR_THROW("Socket::passive", eb_socket_passive(socket, address));
 }
 
+inline eb_status_t eb_proxy_read_handler_cpp(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t* ptr) {
+  Handler* handler = reinterpret_cast<Handler*>(data);
+  return handler->read(address, width, ptr);
+}
+
+inline eb_status_t eb_proxy_write_handler_cpp(eb_user_data_t data, eb_address_t address, eb_width_t width, eb_data_t value) {
+  Handler* handler = reinterpret_cast<Handler*>(data);
+  return handler->write(address, width, value);
+}
+
 inline EB_STATUS_OR_VOID_T Socket::attach(const struct sdb_device* device, Handler* handler) {
   struct eb_handler h;
   h.device = device;
   h.data = handler;
-  h.read  = &eb_proxy_read_handler;
-  h.write = &eb_proxy_write_handler;
+  h.read  = &eb_proxy_read_handler_cpp;
+  h.write = &eb_proxy_write_handler_cpp;
   EB_RETURN_OR_THROW("Socket::attach", eb_socket_attach(socket, &h));
 }
 
@@ -969,6 +981,60 @@ inline EB_STATUS_OR_VOID_T Device::sdb_scan_root_msi(T* user, sdb_callback_msi_t
 
 inline EB_STATUS_OR_VOID_T Device::sdb_find_by_address(eb_address_t address, struct sdb_device* output) {
   EB_RETURN_OR_THROW("Device::sdb_find_by_address", eb_sdb_find_by_address(device, address, output));
+}
+
+inline EB_STATUS_OR_VOID_T Device::sdb_find_by_identity(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_device>& output) {
+  eb_status_t status;
+  int size = 32; /* initial size */
+  
+  output.resize(size);
+  status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size);
+  
+  if (status == EB_OK && size > (int)output.size()) {
+    output.resize(size);
+    /* try again with large enough array */
+    status = eb_sdb_find_by_identity(device, vendor_id, device_id, &output[0], &size);
+  }
+  
+  if (status == EB_OK) {
+    output.resize(size);
+  } else {
+    output.clear();
+  }
+  
+  EB_RETURN_OR_THROW("Device::sdb_find_by_identity", status);
+}
+
+inline EB_STATUS_OR_VOID_T Device::sdb_find_by_identity_msi(uint64_t vendor_id, uint32_t device_id, std::vector<struct sdb_msi_device>& output) {
+  eb_status_t status;
+  
+  int size = 32;
+  std::vector<sdb_device>   sdb(size);
+  std::vector<eb_address_t> first(size);
+  std::vector<eb_address_t> last(size);
+  
+  status = eb_sdb_find_by_identity_msi(device, vendor_id, device_id, &sdb[0], &first[0], &last[0], &size);
+  
+  if (status == EB_OK && size > (int)sdb.size()) {
+    sdb.resize(size);
+    first.resize(size);
+    last.resize(size);
+    /* try again */
+    status = eb_sdb_find_by_identity_msi(device, vendor_id, device_id, &sdb[0], &first[0], &last[0], &size);
+  }
+  
+  if (status == EB_OK) {
+    output.resize(size);
+    for (unsigned i = 0; i < output.size(); ++i) {
+      output[i].sdb_device::operator=(sdb[i]);
+      output[i].msi_first = first[i];
+      output[i].msi_last  = last[i];
+    }
+  } else {
+    output.clear();
+  }
+  
+  EB_RETURN_OR_THROW("Device::sdb_find_by_identity_msi", status);
 }
 
 template <typename T>
