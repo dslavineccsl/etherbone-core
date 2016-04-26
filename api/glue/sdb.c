@@ -280,7 +280,7 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   
   /* Mark an invalid range if not MSI capable */
   if (!found_msi) {
-    msi_first = ~(uint64_t)0;
+    msi_first = ~(eb_address_t)0;
     msi_last  = 0;
   }
   
