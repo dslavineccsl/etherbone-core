@@ -187,6 +187,7 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   struct eb_sdb_scan* scan;
   struct eb_sdb_scan_meta* meta;
   uint16_t i;
+  int found_msi;
   
   scan = EB_SDB_SCAN(scanp);
   meta = EB_SDB_SCAN_META(scan->meta);
@@ -219,6 +220,7 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
   }
   
   /* Descriptor blocks */
+  found_msi = 0;
   for (i = 0; i < sdb->interconnect.sdb_records-1; ++i) {
     union sdb_record* r = &sdb->record[i];
     
@@ -239,14 +241,26 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
       r->msi.bus_specific = be32toh(r->msi.bus_specific);
       /* For MSI, do NOT rebase the nested records as the relationship is inverted */
       eb_sdb_component_decode(&r->msi.sdb_component, 0);
+      
       /* However, DO compute the MSI recursively */
       if ((r->msi.msi_flags >> 31) != 0) {
-        msi_first += r->msi.sdb_component.addr_first;
         /* The first time we find a matching master, that sets last for the rest */
-        if (msi_last == 0) {
-          msi_last = r->msi.sdb_component.addr_last;
-        } else {
-          msi_last += r->msi.sdb_component.addr_first;
+        if (found_msi) {
+          /* Two matching records?! Invalid SDB. */
+          if (cb_fmt == 1) (*cb)(data, device, 0, EB_FAIL);
+          if (cb_fmt == 2) (*cb_msi)(data, device, 0, 0, 0, EB_FAIL);
+          return;
+        }
+        found_msi = 1;
+        /* If parent SDB record said we have no MSI, we still don't */
+        if (msi_first <= msi_last) {
+          msi_first += r->msi.sdb_component.addr_first;
+          /* First SDB we see sets the size of our MSI result */
+          if (msi_last == 0) {
+            msi_last = r->msi.sdb_component.addr_last;
+          } else {
+            msi_last += r->msi.sdb_component.addr_first;
+          }
         }
       }
       break;
@@ -262,6 +276,12 @@ static void eb_sdb_decode(eb_sdb_scan_t scanp, eb_device_t device, uint8_t* buf,
       /* unknown record; skip */
       break;
     }
+  }
+  
+  /* Mark an invalid range if not MSI capable */
+  if (!found_msi) {
+    msi_first = ~(uint64_t)0;
+    msi_last  = 0;
   }
   
   if (cb_fmt == 1) (*cb)(data, device, sdb, EB_OK);
