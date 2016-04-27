@@ -1047,6 +1047,47 @@ a Wishbone autodiscovery structure.
 This structure describes all devices attached to the local Wishbone bus.
 \\
 \hline
+16 &
+Reserved
+\\
+\hline
+24 &
+Reserved
+\\
+\hline
+32 &
+Request MSI. 
+Writing a 1 to this register requests that the Etherbone protocol deliver MSIs
+to the requesting Etherbone master.
+The master must still configure slave devices to send MSIs.
+\\
+\hline
+40 &
+MSI Granted.
+This register should be checked after writing to the Request MSI register.
+If 0, no MSI access has been requested.
+If 1, the Etherbone master has been granted MSI access.
+If 2, this Etherbone master does not support MSI.
+If 3, MSI access could not be granted because all available MSI resources have been claimed.
+Values greated than 3 indicate an Etherbone-master specific failure code.
+\\
+\hline
+48 &
+Low MSI Address.
+MSIs directed at the Etherbone bridge with an address between low and high
+will be delivered to the controlling Etherbone master. The master should
+select MSI addresses from within this range, and combine the selected MSI
+address with the MSI address range of the Etherbone master as seen by the
+transmitting slave. This range can be discovered by summing all active SDB
+MSI Records on the path from the Etherbone master to the transmitting slave.
+\\
+\hline
+56 &
+High MSI Address.
+MSIs directed at the Etherbone bridge with an address between low and high
+will be delivered to the controlling Etherbone master.
+\\
+\hline
 \end{tabular}
 
 \subsection{UDP and TCP streams}
