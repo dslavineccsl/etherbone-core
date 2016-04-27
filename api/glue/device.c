@@ -166,6 +166,44 @@ eb_status_t eb_device_open(eb_socket_t socketp, const char* address, eb_width_t 
   return EB_OK;
 }
 
+eb_status_t eb_device_enable_msi(eb_device_t device, eb_address_t *msi_first, eb_address_t *msi_last) {
+  eb_status_t status;
+  eb_cycle_t cycle;
+  eb_data_t code, low[8], high[8];
+  eb_address_t first, last;
+  int stride, i;
+  
+  /* How big is the largest access we can make? */
+  stride = eb_device_width(device) & EB_DATAX;
+  
+  if ((status = eb_cycle_open(device, 0, 0, &cycle)) != EB_OK) return status;
+  
+  /* Config space is always bigendian */
+  eb_cycle_write_config(cycle, 40-stride, EB_BIG_ENDIAN|stride, 1);
+  eb_cycle_read_config (cycle, 48-stride, EB_BIG_ENDIAN|stride, &code);
+  
+  for (i = 0; i < 8; i += stride)
+    eb_cycle_read_config(cycle, 48+i, EB_BIG_ENDIAN|stride, &low[i]);
+  for (i = 0; i < 8; i += stride)
+    eb_cycle_read_config(cycle, 56+i, EB_BIG_ENDIAN|stride, &high[i]);
+  
+  if ((status = eb_cycle_close_silently(cycle)) != EB_OK) return status;
+  
+  /* Combine the read words */
+  first = 0; for (i = 0; i < 8; i += stride) first = (first << (8*stride)) | low[i];
+  last  = 0; for (i = 0; i < 8; i += stride) last  = (last  << (8*stride)) | high[i];
+  
+  *msi_first = first;
+  *msi_last  = last;
+  
+  switch (code) {
+  case 1:  return EB_OK;
+  case 2:  return EB_ABI;
+  case 3:  return EB_BUSY;
+  default: return EB_FAIL;
+  }
+}
+
 eb_status_t eb_socket_passive(eb_socket_t socketp, const char* address) {
   eb_device_t devicep;
   eb_transport_t transportp;

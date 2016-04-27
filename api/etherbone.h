@@ -435,6 +435,21 @@ eb_status_t eb_device_open_nb(eb_socket_t    socket,
                               eb_user_data_t user_data,
                               eb_callback_t  callback);
 
+/* Enable MSI delivery for this master.
+ * If successful, the msi_first and msi_last range will be filled with a range
+ * of addresses on which MSI accesses can be received.
+ *
+ * Return codes:
+ *   OK         - MSI enabled
+ *   BUSY       - No more MSI resources were available
+ *   ABI        - No MSI supported by hardware
+ *   FAIL       - Failed due to hardware-specific error
+ */
+EB_PUBLIC
+eb_status_t eb_device_enable_msi(eb_device_t device,
+                                 eb_address_t *msi_first,
+                                 eb_address_t *msi_last);
+
 /* Open a remote Etherbone device at 'address' (default port 0xEBD0) passively.
  * The channel is opened and the remote device should initiate the EB exchange.
  * This is useful for stream protocols where the master cannot be the initiator.
@@ -754,6 +769,8 @@ class Device {
     
     width_t width() const;
     
+    EB_STATUS_OR_VOID_T enable_msi(eb_address_t* msi_first, eb_address_t* msi_last);
+    
     template <typename T>
     EB_STATUS_OR_VOID_T sdb_scan_bus(const struct sdb_bridge* bridge, T* user, sdb_callback_t);
     template <typename T>
@@ -957,6 +974,10 @@ inline Socket Device::socket() {
 
 inline width_t Device::width() const {
   return eb_device_width(device);
+}
+
+inline EB_STATUS_OR_VOID_T Device::enable_msi(eb_address_t* msi_first, eb_address_t* msi_last) {
+  EB_RETURN_OR_THROW("Device::enable_msi", eb_device_enable_msi(device, msi_first, msi_last));
 }
 
 template <typename T>
