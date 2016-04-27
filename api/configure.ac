@@ -1,6 +1,6 @@
 dnl Set these variables before each release:
 m4_define(MAJOR,2)    dnl Increment if removed/changed public symbols since previous release
-m4_define(MINOR,0)    dnl Increment if added public symbols; reset to 0 if MAJOR changed
+m4_define(MINOR,1)    dnl Increment if added public symbols; reset to 0 if MAJOR changed
 m4_define(REVISION,0) dnl Increment on each release; reset to 0 if MAJOR/MINOR changed
 m4_define(SONAME,5)   dnl Whenever MAJOR is incremented, add MINOR+1 to this variable
 

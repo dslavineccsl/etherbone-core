@@ -1,3 +1,9 @@
+etherbone (2.1.0-1) unstable; urgency=medium
+
+  * Support MSI access requests.
+
+ -- Wesley W. Terpstra <terpstra@debian.org>  Wed, 27 Apr 2016 21:38:31 +0200
+
 etherbone (2.0.0-1) unstable; urgency=medium
 
   * Removed all C++ symbols from library.
