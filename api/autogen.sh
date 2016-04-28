@@ -1,9 +1,9 @@
 #! /bin/sh
-cd $(dirname $(readlink -e "$0"))
+cd $(dirname "$0")
 set -ex
 git log > ChangeLog
 aclocal -I auto
 autoheader
 autoconf
-libtoolize -c
+which libtoolize >/dev/null && libtoolize -c || glibtoolize -c
 automake -a -c
