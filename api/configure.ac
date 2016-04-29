@@ -41,7 +41,7 @@ AC_CACHE_CHECK([for operating system], [ac_cv_OS], [AS_CASE([`${UNAME} -s`],
   [Darwin], [AS_IF(["${SW_VERS}" 2>/dev/null >/dev/null],
                    [ac_cv_OS="`${SW_VERS} -productName` `${SW_VERS} -productVersion`"],
                    [AC_MSG_ERROR([sw_vers is required])])],
-  [ac_cv_OS="unknown"])])
+  [ac_cv_OS="`${UNAME} -s`"])])
 
 AC_DEFINE_UNQUOTED([OPERATING_SYSTEM], ["$ac_cv_OS"], [The operating system of the build system])
 AC_DEFINE_UNQUOTED([HOSTNAME], ["${HOSTNAME:-unknown}"], [The hostname of the build system])
