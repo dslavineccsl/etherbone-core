@@ -71,20 +71,27 @@ architecture rtl of eb_master_eth_tx is
   signal r_sum_data  : std_logic_vector(15 downto 0);
   signal s_sum_done  : std_logic_vector(15 downto 0);
   
-  constant c_ip_tol_pos    : natural := 2;
-  constant c_ip_chk_pos    : natural := 10;
-  constant c_udp_len_pos   : natural := 4;
+  constant c_ip_tol_pos   : natural := 2;
+  constant c_ip_chk_pos   : natural := 10;
+  constant c_udp_len_pos  : natural := 4;
   signal s_tx_out_cnt,
-         s_tx_in_cnt       : unsigned(f_ceil_log2( (g_mtu+c_eth_len)/2 ) downto 0);
-  signal s_tx_payload,
+         s_tx_in_cnt      : unsigned(f_ceil_log2( (g_mtu+c_eth_len)/2 ) downto 0);
+  signal s_tx_stb,
          s_ip_tol_ins,
          s_ip_chk_ins,
-         s_udp_len_ins     : std_logic;
-  signal s_otf_mux         : std_logic_vector(2 downto 0);
-  signal s_ip_chk          : std_logic_vector(15 downto 0);
+         s_udp_len_ins    : std_logic;
+  signal s_otf_mux        : std_logic_vector(2 downto 0);
+  signal s_ip_chk         : std_logic_vector(15 downto 0);
   signal r_ip_tol,
-         r_udp_len         : std_logic_vector(15 downto 0);
+         r_udp_len        : std_logic_vector(15 downto 0);
   
+  signal r_output_cnt,
+         r_debug_exp      : unsigned(15 downto 0);
+  signal s_src_cyc,
+         s_src_stb,
+         r_src_cyc        : std_logic;
+
+
   constant c_hdr_len  : natural := c_ip_len;
   constant c_runt_min : natural := 64;
   
@@ -303,8 +310,12 @@ begin
     end if;
   end process;
 
-  src_o.cyc <= s_tx_cyc when s_tx_empty='0' else r_tx_cyc;
-  src_o.stb <= not s_tx_empty and s_tx_payload;
+  s_src_cyc <= s_tx_cyc when s_tx_empty='0' else r_tx_cyc;
+  s_src_stb <= not s_tx_empty and s_tx_stb; 
+
+
+  src_o.cyc <= s_src_cyc;
+  src_o.stb <= s_src_stb;
   src_o.adr <= c_WRF_STATUS when s_tx_typ='1' else c_WRF_DATA;
   src_o.we  <= '1';
   src_o.sel <= "11";
@@ -312,21 +323,20 @@ begin
 --**************************************************************************--
 -- on the fly insertion of IP TOL and IP Checksum field
 ------------------------------------------------------------------------------
+  -- use FIFO cyc output this to control WB cycle line
+  s_tx_stb <= s_tx_cyc;
 
-  -- first element is length recorded by the commit fifo
-  s_tx_payload <= '0' when s_tx_out_cnt = 0
-             else '1';
   
   -- Flag for TOL field, high when present on s_tx_dat 
-  s_ip_tol_ins <= '1' when (s_tx_out_cnt -4)  = (c_eth_len + c_ip_tol_pos)
+  s_ip_tol_ins <= '1' when r_output_cnt   = (c_eth_len + c_ip_tol_pos)
              else '0';
   
   -- Flag for Checksum field, high when present on s_tx_dat            
-  s_ip_chk_ins <= '1' when (s_tx_out_cnt -4) = (c_eth_len + c_ip_chk_pos)
+  s_ip_chk_ins <= '1' when r_output_cnt = (c_eth_len + c_ip_chk_pos)
              else '0';
              
   -- Flag for TOL field, high when present on s_tx_dat 
-  s_udp_len_ins <= '1' when (s_tx_out_cnt -4)  = (c_eth_len + c_ip_len + c_udp_len_pos)
+  s_udp_len_ins <= '1' when r_output_cnt = (c_eth_len + c_ip_len + c_udp_len_pos)
              else '0';                      
   
   -- Correct checksum including TOL, valid on s_ip_chk_ins HI
@@ -342,18 +352,52 @@ begin
                 r_udp_len when "100",
                 s_tx_dat  when others;  
   
+
+  
   -- get TOL from first element in commit fifo
    otf_mod_ip_hdr : process(clk_i)
    begin
       if rising_edge(clk_i) then
-         if( s_tx_empty = '0' and s_tx_payload = '0') then
+         if ( s_tx_typ = '0' and s_tx_cyc = '0' and s_tx_empty = '0') then -- only first element (length) in commit fifo is type 0 cyc 0
              r_ip_tol <=  std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len, s_tx_dat'length) -2); -- deduct eth hdr length and OOB length element
              r_udp_len <= std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len + c_ip_len, s_tx_dat'length) -2);
          end if;
+
       end if;   
    end process;
-------------------------------------------------------------------------------
 
+
+
+
+  output_cnt :  process(clk_i, rst_n_i) is
+  begin
+    if rst_n_i = '0' then
+      r_output_cnt  <= (others => '0');
+      r_debug_exp   <= (others => '0');
+      r_src_cyc     <= '0';
+    elsif rising_edge(clk_i) then
+
+      if( s_tx_typ = '0' and s_tx_cyc = '0' and s_tx_empty = '0')  then
+             r_debug_exp <=  unsigned(s_tx_dat) -2; -- deduct eth hdr length and OOB length element
+      end if;
+
+      r_src_cyc <= s_src_cyc;
+
+
+
+      if (s_src_cyc and s_src_stb and not s_tx_typ and not src_i.stall) = '1' then
+        r_output_cnt <= r_output_cnt +2;
+      end if;
+
+
+      if s_src_cyc = '0' and r_src_cyc = '1' then
+        assert r_output_cnt = r_debug_exp report "COUNTER MISMATCH!!!" severity failure; 
+        r_output_cnt <= (others => '0');
+      end if;
+  end if;
+  end process;
+
+------------------------------------------------------------------------------
 
   s_tx_pop <= not s_tx_empty and not (s_tx_cyc and src_i.stall);
   
