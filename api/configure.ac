@@ -49,7 +49,10 @@ AC_DEFINE_UNQUOTED([USERNAME], ["${USERNAME:-${LOGNAME:-${USER:-unknown}}}"], [T
 
 AC_PATH_PROGS([DOCBOOK2MAN], [docbook2man])
 AC_PATH_PROGS([GIT], [git])
-AM_CONDITIONAL([REBUILD_MAN_PAGES], [test x$DOCBOOK2MAN != x])
+AC_ARG_ENABLE([build-man], 
+  [  --enable-build-man      enable man page generation from docbook files],
+  [BUILD_MAN=${enableval}], [BUILD_MAN=no])
+AM_CONDITIONAL([REBUILD_MAN_PAGES], [test \( x$DOCBOOK2MAN != x \) -a \( x$BUILD_MAN != xno \) ])
 AM_CONDITIONAL([GIT_TREE], [test x$GIT != x -a -e ../.git])
 if test -e ../.git -a "x$DOCBOOK2MAN" = "x"; then
   AC_MSG_ERROR([Building from a git checkout requires docbook2man])
