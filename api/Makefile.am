@@ -6,9 +6,12 @@ lib_LTLIBRARIES = libetherbone.la
 EXTRA_PROGRAMS  = test/sizes test/loopback test/etherbonetest
 pkg_DATA	= etherbone.pc
 bin_PROGRAMS    = tools/eb-read      tools/eb-write      tools/eb-put      tools/eb-get      tools/eb-snoop      tools/eb-ls      tools/eb-find      tools/eb-tunnel      tools/eb-discover
+
+if REBUILD_MAN_PAGES
 dist_man_MANS   = tools/eb-read.1    tools/eb-write.1    tools/eb-put.1    tools/eb-get.1    tools/eb-snoop.1    tools/eb-ls.1    tools/eb-find.1    tools/eb-tunnel.1    tools/eb-discover.1
 EXTRA_DIST      = tools/eb-read.sgml tools/eb-write.sgml tools/eb-put.sgml tools/eb-get.sgml tools/eb-snoop.sgml tools/eb-ls.sgml tools/eb-find.sgml tools/eb-tunnel.sgml tools/eb-discover.sgml \
 		  etherbone.pc.in glue/version.c.in
+endif
 
 SOURCES =				\
 	memory/dynamic.c		\
