@@ -174,9 +174,6 @@ begin
   slave_stall_o   <= s_stall;
   slave_ack_o     <= r_push; 
 
-
-  
-
 ------------------------------------------------------------------------------
 -- Input fifo
 ------------------------------------------------------------------------------
@@ -216,21 +213,20 @@ begin
   p_register_io : process (clk_i, rst_n_i) is
   begin
     if rst_n_i = '0' then
- 		rec_hdr_o.res1      	<= '0';
-      rec_hdr_o.res2      	<= '0';
-      rec_hdr_o.bca_cfg   	<= '1';
-      rec_hdr_o.rd_fifo   	<= '0';
-      rec_hdr_o.wr_fifo   	<= '0';  
-      rec_hdr_o.sel       	<= x"00";
-      rec_hdr_o.drop_cyc  	<= '0';      
-      rec_hdr_o.rca_cfg   	<= '0';
-      rec_hdr_o.rd_fifo   	<= '0';
-      rec_hdr_o.wca_cfg   	<= '0'; 
-		rec_hdr_o.wr_cnt 		  <= (others=> '0');
-      rec_hdr_o.rd_cnt 		<= (others=> '0');
-		
-		rec_adr_rd_o 			<= (others=> '0');
-		rec_adr_wr_o 			<= (others=> '0');
+      rec_hdr_o.res1      <= '0';
+      rec_hdr_o.res2      <= '0';
+      rec_hdr_o.bca_cfg   <= '0';
+      rec_hdr_o.rd_fifo   <= '0';
+      rec_hdr_o.wr_fifo   <= '0';  
+      rec_hdr_o.sel       <= x"00";
+      rec_hdr_o.drop_cyc  <= '0';      
+      rec_hdr_o.rca_cfg   <= '0';
+      rec_hdr_o.rd_fifo   <= '0';
+      rec_hdr_o.wca_cfg   <= '0'; 
+      rec_hdr_o.wr_cnt    <= (others=> '0');
+      rec_hdr_o.rd_cnt    <= (others=> '0');
+      rec_adr_rd_o        <= (others=> '0');
+      rec_adr_wr_o        <= (others=> '0');
     elsif rising_edge(clk_i) then
 
       -- changes of dat and sel on fifo output are of course only valid on non empty fifo
@@ -316,9 +312,10 @@ byte_cnt_o <= s_word_cnt(13 downto 0) & "00";
       r_adr_wr    <= (others => '0');
       r_mode      <= UNKNOWN;
       r_wb_pop    <= '0';
+      r_ack       <= '0'; 
       r_rec_hdr.res1      <= '0';
       r_rec_hdr.res2      <= '0';
-      r_rec_hdr.bca_cfg   <= '1';
+      r_rec_hdr.bca_cfg   <= '0';
       r_rec_hdr.rd_fifo   <= '0';
       r_rec_hdr.wr_fifo   <= '0';  
       r_rec_hdr.sel       <= x"00";
@@ -326,8 +323,7 @@ byte_cnt_o <= s_word_cnt(13 downto 0) & "00";
       r_rec_hdr.rca_cfg   <= '0';
       r_rec_hdr.rd_fifo   <= '0';
       r_rec_hdr.wca_cfg   <= '0'; 
-      r_ack       <= '0'; 
-     elsif rising_edge(clk_i) then
+    elsif rising_edge(clk_i) then
       v_state     := r_hdr_state;                    
       r_rec_valid <= '0';
       r_push_hdr  <= '0';
@@ -338,13 +334,12 @@ byte_cnt_o <= s_word_cnt(13 downto 0) & "00";
       when s_START  =>  --register all cfg data
                         r_rec_hdr.res1      <= '0';
                         r_rec_hdr.res2      <= '0';
-                        r_rec_hdr.bca_cfg   <= '1';
-                        r_rec_hdr.rd_fifo   <= '0';
+                        r_rec_hdr.bca_cfg   <= cfg_rec_hdr_i.bca_cfg;
+                        r_rec_hdr.rd_fifo   <= cfg_rec_hdr_i.rd_fifo;
                         r_rec_hdr.wr_fifo   <= '0';  
                         r_rec_hdr.sel       <= x"0" & s_sel;
                         r_rec_hdr.drop_cyc  <= cfg_rec_hdr_i.drop_cyc;      
                         r_rec_hdr.rca_cfg   <= cfg_rec_hdr_i.rca_cfg;
-                        r_rec_hdr.rd_fifo   <= cfg_rec_hdr_i.rd_fifo;
                         r_rec_hdr.wca_cfg   <= cfg_rec_hdr_i.wca_cfg;  
                         r_mode    <= UNKNOWN; 
                         if(wb_fifo_empty = '0') then
