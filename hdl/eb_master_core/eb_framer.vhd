@@ -272,7 +272,14 @@ begin
 ------------------------------------------------------------------------------
 -- Output Mux
 ------------------------------------------------------------------------------
-  r_eb_hdr  <= c_eb_init;
+  r_eb_hdr.magic        <= c_eb_init.magic;
+  r_eb_hdr.ver          <= c_eb_init.ver;
+  r_eb_hdr.res1         <= c_eb_init.res1;
+  r_eb_hdr.no_response  <= cfg_rec_hdr_i.res1;
+  r_eb_hdr.probe_res    <= c_eb_init.probe_res;
+  r_eb_hdr.probe        <= c_eb_init.probe;
+  r_eb_hdr.addr_size    <= c_eb_init.addr_size;
+  r_eb_hdr.data_size    <= c_eb_init.data_size;
   
   OMux : with r_state select
   master_o.dat <= op_fifo_q(31 downto 0)  when s_WRITE | s_READ,
