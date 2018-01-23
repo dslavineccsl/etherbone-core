@@ -359,7 +359,8 @@ package eb_internals_pkg is
     skip_stall_o : out std_logic;
     my_mac_i     : in  std_logic_vector(47 downto 0);
     my_ip_i      : in  std_logic_vector(31 downto 0);
-    my_port_i    : in  std_logic_vector(15 downto 0)
+    my_port_i    : in  std_logic_vector(15 downto 0);
+    use_fec_i    : in  std_logic
     );
    end component;
    

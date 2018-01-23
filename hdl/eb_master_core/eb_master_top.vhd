@@ -352,6 +352,7 @@ begin
       skip_stall_o => open,
       my_mac_i     => s_my_mac,
       my_ip_i      => s_my_ip,
-      my_port_i    => s_my_port);
+      my_port_i    => s_my_port,
+      use_fec_i    => s_cfg_rec_hdr(24));
 
 end architecture;

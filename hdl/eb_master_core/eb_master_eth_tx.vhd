@@ -28,7 +28,9 @@ entity eb_master_eth_tx is
     --fifo_cnt_o   : out std_logic(f_ceil_log2( (g_mtu+c_eth_len)/2 ) downto 0); 
     my_mac_i     : in  std_logic_vector(47 downto 0);
     my_ip_i      : in  std_logic_vector(31 downto 0);
-    my_port_i    : in  std_logic_vector(15 downto 0));
+    my_port_i    : in  std_logic_vector(15 downto 0);
+    use_fec_i    : in  std_logic := '0'
+  );
 end eb_master_eth_tx;
 
 architecture rtl of eb_master_eth_tx is
@@ -71,19 +73,22 @@ architecture rtl of eb_master_eth_tx is
   signal r_sum_data  : std_logic_vector(15 downto 0);
   signal s_sum_done  : std_logic_vector(15 downto 0);
   
-  constant c_ip_tol_pos   : natural := 2;
-  constant c_ip_chk_pos   : natural := 10;
-  constant c_udp_len_pos  : natural := 4;
+  constant c_ip_tol_pos       : natural := 2;
+  constant c_ip_chk_pos       : natural := 10;
+  constant c_udp_len_pos      : natural := 4;
+  constant c_eth_typ_len_pos  : natural := 12;
   signal s_tx_out_cnt,
          s_tx_in_cnt      : unsigned(f_ceil_log2( (g_mtu+c_eth_len)/2 ) downto 0);
   signal s_tx_stb,
          s_ip_tol_ins,
          s_ip_chk_ins,
+         s_eth_typ_len_ins,
          s_udp_len_ins    : std_logic;
-  signal s_otf_mux        : std_logic_vector(2 downto 0);
+  signal s_otf_mux        : std_logic_vector(3 downto 0);
   signal s_ip_chk         : std_logic_vector(15 downto 0);
   signal r_ip_tol,
-         r_udp_len        : std_logic_vector(15 downto 0);
+         r_udp_len,
+         r_eth_typ_len    : std_logic_vector(15 downto 0);
   
   signal r_output_cnt,
          r_debug_exp      : unsigned(15 downto 0);
@@ -326,6 +331,10 @@ begin
   -- use FIFO cyc output this to control WB cycle line
   s_tx_stb <= s_tx_cyc;
 
+  -- Flag for Ethertype Length field, high when present on s_tx_dat 
+  s_eth_typ_len_ins <= '1' when (((s_tx_out_cnt -2)  = (0 + c_eth_typ_len_pos)) AND use_fec_i = '1')
+             else '0';
+
   
   -- Flag for TOL field, high when present on s_tx_dat 
   s_ip_tol_ins <= '1' when r_output_cnt   = (c_eth_len + c_ip_tol_pos)
@@ -343,14 +352,15 @@ begin
   s_ip_chk <= not(std_logic_vector(unsigned(s_tx_dat) + unsigned(r_ip_tol)));
   
   -- Output Mux for otf insertion
-  s_otf_mux <= s_udp_len_ins & s_ip_chk_ins & s_ip_tol_ins;
+  s_otf_mux <= s_udp_len_ins & s_ip_chk_ins & s_ip_tol_ins & s_eth_typ_len_ins;
   
   otf_mux : with s_otf_mux select
-   src_o.dat <= s_tx_dat  when "000",
-                r_ip_tol  when "001",
-                s_ip_chk  when "010",
-                r_udp_len when "100",
-                s_tx_dat  when others;  
+   src_o.dat <= s_tx_dat      when "0000",
+                r_eth_typ_len when "0001",
+                r_ip_tol      when "0010",
+                s_ip_chk      when "0100",
+                r_udp_len     when "1000",
+                s_tx_dat      when others;  
   
 
   
@@ -361,6 +371,7 @@ begin
          if ( s_tx_typ = '0' and s_tx_cyc = '0' and s_tx_empty = '0') then -- only first element (length) in commit fifo is type 0 cyc 0
              r_ip_tol <=  std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len, s_tx_dat'length) -2); -- deduct eth hdr length and OOB length element
              r_udp_len <= std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len + c_ip_len, s_tx_dat'length) -2);
+             r_eth_typ_len  <= std_logic_vector(unsigned(s_tx_dat) - to_unsigned(c_eth_len, s_tx_dat'length) - 2);
          end if;
 
       end if;   
