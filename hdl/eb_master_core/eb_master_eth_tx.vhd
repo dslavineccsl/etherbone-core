@@ -332,7 +332,7 @@ begin
   s_tx_stb <= s_tx_cyc;
 
   -- Flag for Ethertype Length field, high when present on s_tx_dat 
-  s_eth_typ_len_ins <= '1' when (((s_tx_out_cnt -2)  = (0 + c_eth_typ_len_pos)) AND use_fec_i = '1')
+  s_eth_typ_len_ins <= '1' when ((r_output_cnt  = c_eth_typ_len_pos) AND use_fec_i = '1')
              else '0';
 
   
