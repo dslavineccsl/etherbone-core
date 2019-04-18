@@ -9,7 +9,7 @@ use work.wr_fabric_pkg.all;
 package eb_pcie_slave_pkg is
 
 
-component eb_pci_slave is
+component eb_pcie_slave is
   generic(
     g_fast_ack          : boolean := true;
     g_sdb_address       : t_wishbone_address;

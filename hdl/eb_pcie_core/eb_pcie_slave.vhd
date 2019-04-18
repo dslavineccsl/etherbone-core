@@ -10,7 +10,7 @@ use work.eb_internals_pkg.all;
 use work.eb_hdr_pkg.all;
 use work.genram_pkg.all;
 
-entity eb_pci_slave is
+entity eb_pcie_slave is
   generic(
     g_fast_ack          : boolean := true;
     g_sdb_address       : t_wishbone_address;
@@ -34,9 +34,9 @@ entity eb_pci_slave is
     
     phy_cyc_o     : out std_logic
     );
-end eb_pci_slave;
+end eb_pcie_slave;
 
-architecture rtl of eb_pci_slave is
+architecture rtl of eb_pcie_slave is
 
   constant c_CFG_REG_ARRAY_START    : std_logic_vector(3 downto 0) := x"0"; -- 0x00 -- 0x80
   constant c_RX_FIFO_DATA           : std_logic_vector(3 downto 0) := x"8"; -- 0x20 -- 0xA0
