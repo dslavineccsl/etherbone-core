@@ -52,7 +52,7 @@ static void help(void) {
   fprintf(stderr, "  -r <retries>   number of times to attempt autonegotiation (3)\n");
   fprintf(stderr, "  -s             don't read error status from device\n");
   fprintf(stderr, "  -c             read the config space instead of the bus\n");
-  fprintf(stderr, "  -f             fidelity: do not fragment or widen read\n");
+  fprintf(stderr, "  -f             fidelity: do not fragmentprobe or widen read\n");
   fprintf(stderr, "  -p             disable self-describing wishbone device probe\n");
   fprintf(stderr, "  -v             verbose operation\n");
   fprintf(stderr, "  -q             quiet: do not display warnings\n");
@@ -232,10 +232,13 @@ int main(int argc, char** argv) {
   
   if (verbose)
     fprintf(stdout, "Connecting to '%s' with %d retry attempts...\n", netaddress, attempts);
-  
+
+  fprintf(stderr, "Opening Etherbone device, address %08X\n", netaddress);  
   if ((status = eb_device_open(socket, netaddress, EB_ADDRX|EB_DATAX, attempts, &device)) != EB_OK) {
     fprintf(stderr, "%s: failed to open Etherbone device: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Opened Etherbone device, address %08X\n", netaddress);  
   }
   
   line_width = eb_device_width(device);
@@ -249,9 +252,12 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Scanning remote bus for Wishbone devices...\n");
 
+    fprintf(stderr, "Searching Etherbone device on address %08X\n", address);
     if ((status = eb_sdb_find_by_address(device, address, &info)) != EB_OK) {
       fprintf(stderr, "%s: failed to find SDB record: %s\n", program, eb_status(status));
       return 1;
+    }else{
+       fprintf(stderr, "Found Etherbone device on address %08X\n", address);
     }
     
     if ((info.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
@@ -292,9 +298,12 @@ int main(int argc, char** argv) {
   }
   
   /* Begin the cycle */
+  fprintf(stderr, "Opening Cycle\n");
   if ((status = eb_cycle_open(device, &stop, &set_stop, &cycle)) != EB_OK) {
     fprintf(stderr, "%s: failed to create cycle: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Opened Cycle\n");
   }
   
   /* Can the operation be performed with fidelity? */
@@ -322,6 +331,8 @@ int main(int argc, char** argv) {
     fragment_sizes |= fragment_sizes >> 2; /* Filled in all sizes under max */
     if ((fragment_sizes & read_sizes) != 0) {
       int stride, chunk, count;
+      
+      fprintf(stderr, "Doing fragmented read\n");
       
       /* We can do a fragmented read. Pick largest read possible. */
       complete_size = fragment_sizes ^ (fragment_sizes >> 1); /* This many bytes to read */
@@ -365,16 +376,20 @@ int main(int argc, char** argv) {
           fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                           address, format & EB_DATAX);
         
-        if (config)
+        if (config){
+          fprintf(stderr, "Eb Cycle Read config A:%08X F:%08X\n", address, format);
           eb_cycle_read_config(cycle, address, format, 0);
-        else
+        }else{
+          fprintf(stderr, "Eb Cycle Read A:%08X F:%08X\n", address, format);
+          address += stride;
           eb_cycle_read(cycle, address, format, 0);
-        address += stride;
+        }
       }
       
       shift = 0;
     } else {
       eb_address_t aligned_address;
+      fprintf(stderr, "Doing non fragmented read\n");
       
       /* All bits in read_sizes are larger than all bits in size */
       /* We will need to do a larger operation than the read requested. */
@@ -411,15 +426,22 @@ int main(int argc, char** argv) {
       }
       
       /* Issue the read */
-      if (config)
-        eb_cycle_read_config(cycle, aligned_address, format, 0);
-      else
-        eb_cycle_read(cycle, aligned_address, format, 0);
+	if (config){
+	  fprintf(stderr, "Eb Cycle Read config A:%08X F:%08X\n", aligned_address, format);
+	  eb_cycle_read_config(cycle, aligned_address, format, 0);
+	}else{
+	  fprintf(stderr, "Eb Cycle Read A:%08X F:%08X\n", aligned_address, format);
+	  eb_cycle_read(cycle, aligned_address, format, 0);
+	}
+
+
+
       if (verbose)
         fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                         aligned_address, format & EB_DATAX);
     }
   } else {
+    fprintf(stderr, "Doing normal read\n");
     /* There is a size requested that the device and link supports */
     format |= (size & read_sizes);
     
@@ -434,21 +456,31 @@ int main(int argc, char** argv) {
       fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                       address, format & EB_DATAX);
     
-    if (config)
+
+    if (config){
+      fprintf(stderr, "Eb Cycle Read config A:%08X F:%08X\n", address, format);
       eb_cycle_read_config(cycle, address, format, 0);
-    else
+    }else{
+      fprintf(stderr, "Eb Cycle Read A:%08X F:%08X\n", address, format);
       eb_cycle_read(cycle, address, format, 0);
+    }
     shift = 0;
   }
+
   
   
-  if (silent)
+  if (silent){
+    fprintf(stderr, "Closing cycle silently\n");
     eb_cycle_close_silently(cycle);
-  else
+  }
+  else{
+    fprintf(stderr, "Closing cycle\n");
     eb_cycle_close(cycle);
+  }
     
   stop = 0;
   while (!stop) {
+    fprintf(stderr, "Running socket\n");
     eb_socket_run(socket, -1);
   }
   
@@ -456,14 +488,20 @@ int main(int argc, char** argv) {
   data &= mask;
   fprintf(stdout, "%0*"EB_DATA_FMT"\n", size*2, data);
   
+  fprintf(stderr, "Closing device\n");
   if ((status = eb_device_close(device)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone device: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Closed device\n");
   }
   
+  fprintf(stderr, "Closing socket\n");
   if ((status = eb_socket_close(socket)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone socket: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Closed socket\n");
   }
   
   return 0;

@@ -236,6 +236,8 @@ int main(int argc, char** argv) {
   if ((status = eb_socket_open(EB_ABI_CODE, 0, address_width|data_width, &socket)) != EB_OK) {
     fprintf(stderr, "%s: failed to open Etherbone socket: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Opened socket\n");
   }
   
   if (verbose)
@@ -244,6 +246,8 @@ int main(int argc, char** argv) {
   if ((status = eb_device_open(socket, netaddress, EB_ADDRX|EB_DATAX, attempts, &device)) != EB_OK) {
     fprintf(stderr, "%s: failed to open Etherbone device: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Opened Etherbone device\n");
   }
   
   line_width = eb_device_width(device);
@@ -257,9 +261,12 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Scanning remote bus for Wishbone devices...\n");
     
+    fprintf(stderr, "Searching Wishbone device, A:%08X\n", address);
     if ((status = eb_sdb_find_by_address(device, address, &info)) != EB_OK) {
       fprintf(stderr, "%s: failed to find SDB record: %s\n", program, eb_status(status));
       return 1;
+    }else{
+      fprintf(stderr, "Found Wishbone device, A:%08X\n", address);
     }
     
     if ((info.bus_specific & SDB_WISHBONE_LITTLE_ENDIAN) != 0)
@@ -300,9 +307,12 @@ int main(int argc, char** argv) {
   }
   
   /* Begin the cycle */
+  fprintf(stderr, "Opening wisbone cycle\n");
   if ((status = eb_cycle_open(device, &stop, &set_stop, &cycle)) != EB_OK) {
     fprintf(stderr, "%s: failed to create cycle: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Opened wisbone cycle\n");
   }
   
   /* Can the operation be performed with fidelity? */
@@ -375,10 +385,15 @@ int main(int argc, char** argv) {
         if (verbose)
           fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                           partial_data, address, fragment_size);
-        if (config)
+        if (config){
+          fprintf(stderr, "eb_cycle_write_config A:0x%08X F:0x%X PD:0x%08X\n",
+              address, format, partial_data);
           eb_cycle_write_config(cycle, address, format, partial_data);
-        else
+        }else{
+          fprintf(stderr, "eb_cycle_write A:0x%08X F:0x%X PD:0x%08X\n",
+              address, format, partial_data);
           eb_cycle_write(cycle, address, format, partial_data);
+        }
         shift += shift_step;
       }
     } else {
@@ -423,33 +438,53 @@ int main(int argc, char** argv) {
       data <<= shift*8;
       
       /* Issue the read */
-      if (config)
-        eb_cycle_read_config(cycle, aligned_address, format, &original_data);
-      else
-        eb_cycle_read(cycle, aligned_address, format, &original_data);
+        if (config){
+          fprintf(stderr, "eb_cycle_read_config A:0x%08X F:0x%X PD:0x%08X\n",
+              aligned_address, format, &original_data);
+          eb_cycle_read_config(cycle, aligned_address, format, &original_data);
+        }else{
+          fprintf(stderr, "eb_cycle_read A:0x%08X F:0x%X PD:0x%08X\n",
+              aligned_address, format, &original_data);
+          eb_cycle_read(cycle, aligned_address, format, &original_data);
+        }
+
+
+
       if (verbose)
         fprintf(stdout, "Reading 0x%"EB_ADDR_FMT"/%d\n",
                         aligned_address, format & EB_DATAX);
       
-      if (silent)
+      if (silent){
+        fprintf(stderr, "Closing wisbone cycle silently\n");
         eb_cycle_close_silently(cycle);
-      else
+      }
+      else{
+        fprintf(stderr, "Closing wisbone cycle\n");
         eb_cycle_close(cycle);
+      }
       
       stop = 0;
       while (!stop) {
+        fprintf(stderr, "Running socket\n");
         eb_socket_run(socket, -1);
       }
       
       /* Restart the cycle */
+      fprintf(stderr, "Reopening wisbone cycle\n");
       eb_cycle_open(device, &stop, &set_stop, &cycle);
       
       /* Inject the data */
       data |= original_data & ~mask;
-      if (config)
-        eb_cycle_write_config(cycle, aligned_address, format, data);
-      else
-        eb_cycle_write(cycle, aligned_address, format, data);
+
+        if (config){
+          fprintf(stderr, "eb_cycle_write_config A:0x%08X F:0x%X PD:0x%08X\n",
+              aligned_address, format, data);
+          eb_cycle_write_config(cycle, aligned_address, format, data);
+        }else{
+          fprintf(stderr, "eb_cycle_write A:0x%08X F:0x%X PD:0x%08X\n",
+              aligned_address, format, data);
+          eb_cycle_write(cycle, aligned_address, format, data);
+        }
       
       if (verbose)
         fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
@@ -469,31 +504,51 @@ int main(int argc, char** argv) {
     if (verbose)
       fprintf(stdout, "Writing 0x%"EB_DATA_FMT" to 0x%"EB_ADDR_FMT"/%d\n",
                       data, address, format & EB_DATAX);
-    if (config)
-      eb_cycle_write_config(cycle, address, format, data);
-    else
-      eb_cycle_write(cycle, address, format, data);
+
+        if (config){
+          fprintf(stderr, "eb_cycle_write_config A:0x%08X F:0x%X PD:0x%08X\n",
+              address, format, data);
+          eb_cycle_write_config(cycle, address, format, data);
+        }else{
+          fprintf(stderr, "eb_cycle_write A:0x%08X F:0x%X PD:0x%08X\n",
+              address, format, data);
+          eb_cycle_write(cycle, address, format, data);
+        }
+
   }
-  
-  if (silent)
-    eb_cycle_close_silently(cycle);
-  else
-    eb_cycle_close(cycle);
+
+      if (silent){
+        fprintf(stderr, "Closing wisbone cycle silently\n");
+        eb_cycle_close_silently(cycle);
+      }
+      else{
+        fprintf(stderr, "Closing wisbone cycle\n");
+        eb_cycle_close(cycle);
+      }
+
   
   stop = 0;
   while (!stop) {
+    fprintf(stderr, "Running socket\n");
     eb_socket_run(socket, -1);
   }
   
+  fprintf(stderr, "Closing device\n");
   if ((status = eb_device_close(device)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone device: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Closed device\n");
   }
   
+  fprintf(stderr, "Closing socket\n");
   if ((status = eb_socket_close(socket)) != EB_OK) {
     fprintf(stderr, "%s: failed to close Etherbone socket: %s\n", program, eb_status(status));
     return 1;
+  }else{
+    fprintf(stderr, "Closed socket\n");
   }
+
   
   return 0;
 }
