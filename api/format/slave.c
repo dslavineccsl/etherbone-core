@@ -40,6 +40,10 @@
 #include "bigendian.h"
 #include "format.h"
 
+#include <stdio.h>
+
+#define FNAME printf("%s : %s\n", __FILE__, __FUNCTION__)
+
 static eb_data_t EB_LOAD(uint8_t* rptr, int alignment) {
   switch (alignment) {
   case 2: return be16toh(*(uint16_t*)rptr);
@@ -75,6 +79,13 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
   eb_address_t address_filter_bits;
   int alignment, record_alignment, header_alignment, stride, cycle_end, cycle_open;
   int reply, header, passive, active;
+
+  int nbytes;
+  int i;
+
+
+  
+  FNAME;
   
   transport = EB_TRANSPORT(transportp);
   socket = EB_SOCKET(socketp);
@@ -93,6 +104,7 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
       widths = 0;
       header = 1;
     }
+    printf("%s : %s : eb_transports[%d]\n", __FILE__, __FUNCTION__, transport->link_type);
     
     passive = device->un_link.passive == devicep;
     active = !passive;
@@ -119,20 +131,29 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
    */
 
   reply = 0;
+  printf("%s : %s : eb_transports[%d].poll\n", __FILE__, __FUNCTION__,transport->link_type);
   len = eb_transports[transport->link_type].poll(transport, link, user_data, ready, buffer, sizeof(buffer));
-  if (len == 0) return 0; /* no data ready */
+
+  if (len == 0){
+    printf("%s : %s : No data ready\n", __FILE__, __FUNCTION__);
+    return 0; /* no data ready */
+  }
   if (len < 2) goto kill; /* EB is always 2 byte aligned */
   
   /* Expect and require an EB header */
   if (header) {
     /* On a stream, EB header may not be fragmented */
     if (buffer[0] != 0x4E || buffer[1] != 0x6F || len < 4) goto kill;
+
+    printf("%s : %s : We have valid EB header\n", __FILE__, __FUNCTION__);
     
     /* Is this a probe? */
     if ((buffer[2] & EB_HEADER_PF) != 0) { /* probe flag */
       if (len != 8) goto kill; /* > 8: requestor couldn't send data before we respond! */
                                /* < 8: protocol violation! */
       if (active) goto kill; /* active link not probed! */
+
+      printf("%s : %s : This is probe\n", __FILE__, __FUNCTION__);
       
       widths = buffer[3];
       widths = eb_width_refine(widths & socket->widths);
@@ -143,6 +164,7 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
       if (passive) device->widths = widths; /* This will be the negotiated width */
       
       /* Bytes 4-7 are echoed back */
+      printf("%s : %s : eb_transports[%d].send\n", __FILE__, __FUNCTION__,transport->link_type);
       eb_transports[transport->link_type].send(transport, link, buffer, 8);
       
       /* Kill the link if negotiation is impossible */
@@ -160,6 +182,9 @@ int eb_device_slave(eb_socket_t socketp, eb_transport_t transportp, eb_device_t 
       if (len != 8) goto kill; /* > 8: haven't sent requests, passive should not send data */
                                /* < 8: protocol violation! */
       if (passive) goto kill; /* passive link not responded! */
+
+      printf("%s : %s : This is a probe response\n", __FILE__, __FUNCTION__);
+
       
       /* Find device by probe id */
       tag = EB_LOAD(&buffer[4], EB_DATA32);
@@ -219,6 +244,8 @@ resume_cycle:
   /* Below this point, assume no dereferenced pointer is valid */
 
   /* Start processing the payload */
+  printf("%s : %s : Starting to process the payload\n", __FILE__, __FUNCTION__);
+
   while (rptr <= eos - record_alignment) {
     int total, wconfig, wfifo, rconfig, rfifo, bconfig, sel_ok;
     eb_address_t bwa, bwa_b, bwa_l;
@@ -291,6 +318,16 @@ resume_cycle:
       rptr -= record_alignment;
       
       if (reply) {
+        printf("%s : %s : This is reply\n", __FILE__, __FUNCTION__);
+        nbytes = wptr - &buffer[0];
+
+        printf("%s: %s: Sending %d bytes :",__FILE__, __FUNCTION__, nbytes);
+        for(i = 0; i < nbytes; i++){
+          if(i % 16 == 0) printf("\n");
+          printf("%02x ", buffer[i]);
+        }
+        printf("\n\n");
+
         eb_transports[transport->link_type].send(transport, link, buffer, wptr - &buffer[0]);
       }
       
@@ -299,6 +336,14 @@ resume_cycle:
       
       len = eb_transports[transport->link_type].recv(transport, link, buffer+keep, sizeof(buffer)-keep);
       if (len <= 0) goto kill;
+
+        printf("%s: %s: Received %d bytes :",__FILE__, __FUNCTION__, len);
+        for(i = 0; i < len; i++){
+          if(i % 16 == 0) printf("\n");
+          printf("%02x ", (buffer+keep)[i]);
+        }
+        printf("\n\n");
+
       len += keep;
       
       wptr = &buffer[0];
@@ -307,6 +352,7 @@ resume_cycle:
     }
     
     if (wcount > 0) {
+      printf("%s: %s: wcount=%d\n",__FILE__, __FUNCTION__, wcount);
       wfifo = flags & EB_RECORD_WFF;
       wconfig = flags & EB_RECORD_WCA;
       
@@ -332,11 +378,15 @@ resume_cycle:
         wv &= data_mask;
         
         if (wconfig) {
-          if (sel_ok)
+          if (sel_ok){
+            printf("%s: %s: eb_socket_write_config\n",__FILE__, __FUNCTION__);
             *completed += eb_socket_write_config(socketp, op_width, bwa, wv);
+          }
         } else {
-          if (sel_ok)
+          if (sel_ok){
+            printf("%s: %s: eb_socket_write\n",__FILE__, __FUNCTION__);
             eb_socket_write(socketp, op_width, bwa_b, bwa_l, wv, &error);
+          }
           else
             error = (error<<1) | 1;
         }
@@ -350,6 +400,7 @@ resume_cycle:
     }
     
     if (rcount > 0) {
+      printf("%s: %s: rcount=%d\n",__FILE__, __FUNCTION__, rcount);
       reply = 1;
       rfifo = flags & EB_RECORD_RFF;
       bconfig = flags & EB_RECORD_BCA;
@@ -389,12 +440,14 @@ resume_cycle:
         
         if (rconfig) {
           if (sel_ok) {
+            printf("%s: %s: eb_socket_read_config\n",__FILE__, __FUNCTION__);
             wv = eb_socket_read_config(socketp, op_width, ra_b, error);
           } else {
             wv = 0;
           }
         } else {
           if (sel_ok) {
+            printf("%s: %s: eb_socket_read\n",__FILE__, __FUNCTION__);
             wv = eb_socket_read(socketp, op_width, ra_b, ra_l, &error);
           } else {
             wv = 0;
@@ -420,6 +473,17 @@ resume_cycle:
   
   /* Reply if needed */
   if (reply) {
+
+        printf("%s : %s : This is reply\n", __FILE__, __FUNCTION__);
+        nbytes = wptr - &buffer[0];
+
+        printf("%s: %s: Sending %d bytes :",__FILE__, __FUNCTION__, nbytes);
+        for(i = 0; i < nbytes; i++){
+          if(i % 16 == 0) printf("\n");
+          printf("%02x ", buffer[i]);
+        }
+        printf("\n\n");
+
     eb_transports[transport->link_type].send(transport, link, buffer, wptr - &buffer[0]);
   }
   
@@ -434,6 +498,14 @@ resume_cycle:
     len = eb_transports[transport->link_type].recv(transport, link, buffer+keep, sizeof(buffer)-keep);
     if (len <= 0) goto kill;
     len += keep;
+
+        printf("%s: %s: Received %d bytes :",__FILE__, __FUNCTION__, len);
+        for(i = 0; i < len; i++){
+          if(i % 16 == 0) printf("\n");
+          printf("%02x ", (buffer+keep)[i]);
+        }
+        printf("\n\n");
+
     
     wptr = rptr = &buffer[0];
     eos = rptr + len;
@@ -450,13 +522,16 @@ kill:
   if (devicep == EB_NULL) return 0;
   
   if (passive) {
+    printf("%s: %s: kill: Closing EB device %x:",__FILE__, __FUNCTION__, devicep);
     eb_device_close(devicep);
   } else {
     device = EB_DEVICE(devicep);
     transport = EB_TRANSPORT(transportp);
     link = EB_LINK(linkp);
     
+    printf("%s: %s: kill: Disconnecting EB device %x:",__FILE__, __FUNCTION__, device);
     eb_transports[transport->link_type].disconnect(transport, link);
+    printf("%s: %s: kill: Freeing link %x:",__FILE__, __FUNCTION__, device->link);
     eb_free_link(device->link);
     device->link = EB_NULL;
   }

@@ -37,9 +37,13 @@
 #include "../memory/memory.h"
 #include "../format/format.h"
 
+#include <stdio.h>
+
 #ifdef __WIN32
 #include <winsock2.h>
 #endif
+
+#define FNAME printf("%s : %s\n", __FILE__, __FUNCTION__)
 
 eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t supported_widths, eb_socket_t* result) {
   eb_socket_t socketp;
@@ -54,6 +58,8 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   WORD wVersionRequested;
   WSADATA wsaData;
 #endif
+  
+  FNAME;
   
   /* Does the library support the application? */
   if (abi_code != EB_ABI_CODE)
@@ -74,17 +80,22 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   }
   
   /* Allocate the soocket */
+  printf("%s : %s : Allocating new socket\n", __FILE__, __FUNCTION__);
   socketp = eb_new_socket();
   if (socketp == EB_NULL) {
     *result = EB_NULL;
     return EB_OOM;
   }
+  printf("%s : %s : New socket allocated : 0x%08x\n", __FILE__, __FUNCTION__, socketp);
+  
+  printf("%s : %s : Allocating new socket aux\n", __FILE__, __FUNCTION__);
   auxp = eb_new_socket_aux();
   if (auxp == EB_NULL) {
     *result = EB_NULL;
     eb_free_socket(socketp);
     return EB_OOM;
   }
+  printf("%s : %s : New aux socket allocated : 0x%08x\n", __FILE__, __FUNCTION__, auxp);
   
 #ifdef __WIN32
   wVersionRequested = MAKEWORD(2, 2);
@@ -96,6 +107,7 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
 #endif
   
   /* Allocate the transports */
+  printf("%s : %s : Starting transport allocation\n", __FILE__, __FUNCTION__);  
   status = EB_OK;
   first_transport = EB_NULL;
   for (link_type = 0; link_type != eb_transport_size; ++link_type) {
@@ -125,6 +137,8 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
     transport->next = first_transport;
     transport->link_type = link_type;
     first_transport = transportp;
+    printf("%s : %s : Allocated transport : link_type=%x\n", __FILE__, __FUNCTION__, link_type);
+    
   }
   
   /* Allocation is finished, dereference the pointers */
@@ -149,6 +163,7 @@ eb_status_t eb_socket_open(uint16_t abi_code, const char* port, eb_width_t suppo
   }
   
   /* Update time_cache */
+  printf("%s : %s : Updating socket time cache\n", __FILE__, __FUNCTION__);
   eb_socket_run(socketp, 0);
   
   *result = socketp;
@@ -180,6 +195,8 @@ eb_status_t eb_socket_close(eb_socket_t socketp) {
   eb_socket_aux_t auxp;
   eb_handler_address_t i, next;
   eb_status_t status;
+  
+  FNAME;
   
   socket = EB_SOCKET(socketp);
   
@@ -232,6 +249,8 @@ static void eb_socket_filter_inflight(eb_response_t* goodp, eb_response_t* badp,
   eb_response_t responsep, next_responsep;
   eb_cycle_t cyclep;
   
+  FNAME;
+  
   good = *goodp;
   bad = *badp;
   
@@ -263,6 +282,8 @@ void eb_socket_kill_inflight(eb_socket_t socketp, eb_device_t devicep) {
   eb_response_t responsep, next_responsep;
   eb_response_t good, bad;
   eb_cycle_t cyclep;
+  
+  FNAME;
   
   /* Split the list into good responses we keep, and bad responses we kill */
   good = EB_NULL;
@@ -304,6 +325,8 @@ void eb_socket_descriptors(eb_socket_t socketp, eb_user_data_t user, eb_descript
   eb_transport_t transportp, next_transportp, first_transportp;
   eb_link_t linkp;
   
+  FNAME;
+  
   socket = EB_SOCKET(socketp);
   aux = EB_SOCKET_AUX(socket->aux);
   
@@ -343,6 +366,8 @@ uint32_t eb_socket_timeout(eb_socket_t socketp) {
   uint16_t udelta;
   int16_t sdelta;
   
+  FNAME;
+  
   socket = EB_SOCKET(socketp);
   aux = EB_SOCKET_AUX(socket->aux);
   
@@ -378,6 +403,8 @@ int eb_socket_check(eb_socket_t socketp, uint32_t now, eb_user_data_t user, eb_d
   eb_cycle_t cyclep;
   eb_socket_aux_t auxp;
   int completed;
+  
+  FNAME;
   
   socket = EB_SOCKET(socketp);
   auxp = socket->aux;
